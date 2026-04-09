@@ -1,101 +1,138 @@
-# FinFusion
+# FinFusion 💸
 
-Personal finance dashboard with a React frontend and FastAPI backend.
+FinFusion is a full-stack personal finance intelligence platform built to help users track expenses, understand spending behavior, and explore predictive insights through an interactive dashboard. The project combines modern frontend design with backend analytics, machine learning-based forecasting, and OCR-assisted expense entry to create a more intelligent expense management experience.
 
-## Local Run
+## Project Overview
 
-### Backend
+The core goal of FinFusion is to move beyond simple expense logging and into explainable financial analysis. Instead of showing only raw transaction lists, the application turns user data into dashboards, category analytics, forecast simulations, and insight panels that help users understand how and where they spend.
 
-From `/Users/mel/Desktop/Fin-V2/backend`:
+The system is designed around three ideas:
 
-```bash
-./venv/bin/python -m uvicorn server:app --reload --host 127.0.0.1 --port 8000
-```
+- expense tracking with persistent user accounts
+- intelligent analytics generated from transaction history
+- decision-support UI powered by forecasting and receipt OCR
 
-Backend health check:
+## Key Features
 
-```bash
-curl http://127.0.0.1:8000/api/health
-```
+### Expense Management
+
+- Add, edit, and delete personal expenses
+- Separate demo and user-entered data modes
+- Categorized transaction history across food, rent, utilities, travel, healthcare, and more
+
+### Dashboard Analytics
+
+- Monthly spending summaries
+- Category breakdowns and budget tracking
+- Recent expense activity
+- Data-driven insight cards generated from historical behavior
+
+### Forecasting
+
+- LSTM-based time-series forecasting for future spending projection
+- Recursive multi-day prediction pipeline
+- Forecast trend detection, peak day estimation, and confidence scoring
+- Explainable forecast UI with projected totals, category pressure, and context panels
+
+### Receipt Scanning with OCR
+
+- Upload receipt images directly from the dashboard
+- OCR extraction of total amount, category, and spending description
+- Editable verification step before final submission
+- Manual fallback when OCR confidence is low or extraction fails
+
+### Historical Insights
+
+- Monthly trend visualization
+- Category trend comparison over time
+- Top-spending category ranking
+- Month-over-month analysis for spending changes
+
+## Machine Learning and Intelligence Layer
+
+FinFusion includes an LSTM-based forecasting pipeline that uses historical spending sequences to simulate likely future spending behavior. The model is designed to learn temporal patterns from transaction history, such as recurring spikes, day-based rhythm, and broader spending drift.
+
+The forecasting pipeline includes:
+
+- feature engineering from daily spending history
+- rolling averages and temporal context features
+- recursive 30-day prediction
+- post-processing for stability and realistic outputs
+- backend-generated forecast insights for frontend visualization
+
+The application also includes a rule-based insight layer that transforms computed metrics into readable observations, such as trend direction, category pressure, and liquidity alerts.
+
+## OCR Pipeline
+
+The receipt scanning flow uses OCR to extract text from uploaded receipts and then parse the content to identify:
+
+- total payable amount
+- transaction date
+- likely category
+- merchant or item description
+
+This information is passed back to the frontend, where the user can verify and edit the extracted fields before saving the expense. This keeps the workflow practical and user-safe, especially when OCR is imperfect.
+
+## Tech Stack
 
 ### Frontend
 
-From `/Users/mel/Desktop/Fin-V2/frontend`:
+- React
+- CRACO
+- Tailwind CSS
+- Recharts
+- Radix UI components
 
-```bash
-npm install
-npm start
-```
+### Backend
 
-The frontend expects the backend at `http://127.0.0.1:8000` by default.
+- FastAPI
+- SQLAlchemy
+- SQLite
+- Pandas and NumPy for analytics processing
 
-## Demo Login
+### Machine Learning / Data
 
-```text
-demo@example.com
-demo123
-```
+- TensorFlow / Keras for LSTM forecasting
+- scikit-learn for preprocessing and supporting utilities
+- pytesseract for OCR-based receipt parsing
 
-## Production Build
+## Application Architecture
 
-From `/Users/mel/Desktop/Fin-V2/frontend`:
+FinFusion follows a split frontend-backend architecture:
 
-```bash
-npm run build
-```
+- the frontend is responsible for authentication flow, dashboards, charts, and user interaction
+- the backend is responsible for persistence, filtering, analytics, forecasting, and OCR parsing
 
-The compiled frontend is written to `/Users/mel/Desktop/Fin-V2/frontend/build`.
+The platform is organized so that business logic lives on the backend and the frontend consumes structured API responses for rendering. This keeps analytics and predictive behavior centralized and easier to extend.
 
-## Public Deploy
+## Demo Accounts
 
-Recommended free setup:
+Two demo modes are included for presentation and evaluation:
 
-- Frontend: Vercel
-- Backend: Render
+- `demo@example.com` / `demo123`
+  Preloaded with historical dataset-backed spending data
 
-### Frontend on Vercel
+- `demo2@example.com` / `demo123`
+  Empty account intended for live manual entry demos
 
-1. Import the repo into Vercel.
-2. Set the project root to `/frontend`.
-3. Set the build command to:
+## Deployment
 
-```bash
-npm run build
-```
+The project is configured for public deployment using:
 
-4. Set the output directory to:
+- Vercel for the frontend
+- Render for the backend
 
-```bash
-build
-```
+The backend Docker configuration includes OCR system dependencies so receipt scanning can work in production. The application also supports hosted database configuration through environment variables when moving beyond local SQLite storage.
 
-5. Add this environment variable:
+## Purpose 📌
 
-```bash
-REACT_APP_BACKEND_URL=https://YOUR-BACKEND.onrender.com
-```
+FinFusion was built as an academic full-stack intelligent finance project that demonstrates how traditional expense tracking can be extended with:
 
-The SPA rewrite config is already included in `/Users/mel/Desktop/Fin-V2/frontend/vercel.json`.
+- machine learning
+- OCR
+- interactive analytics
+- explainable ai driven financial insights
 
-### Backend on Render
+Rather than positioning itself as a production-grade financial advisory system, the project is intended as a practical demonstration of intelligent personal finance tooling with a strong focus on usability, interpretability, and end-to-end system design.
 
-1. Create a new Web Service in Render.
-2. Connect this repo.
-3. Choose `Docker` as the runtime.
-4. Use `/Users/mel/Desktop/Fin-V2/backend/Dockerfile`.
-5. Set these environment variables:
-
-```bash
-CORS_ORIGINS=https://YOUR-FRONTEND.vercel.app
-JWT_SECRET_KEY=replace-this-with-a-long-random-secret
-```
-
-Optional for persistent hosted data:
-
-```bash
-DATABASE_URL=postgresql+psycopg://...
-```
-
-If `DATABASE_URL` is not set, the backend falls back to SQLite.
-
-The backend Docker image includes `tesseract-ocr`, so receipt scanning can work in production.
+Thank you for stopping by 💕
