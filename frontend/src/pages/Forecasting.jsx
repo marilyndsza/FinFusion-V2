@@ -6,17 +6,26 @@ import Navbar from '@/components/Navbar';
 import UserMenu from '@/components/UserMenu';
 import logo from '@/assets/logo.png';
 import { useTrendMode } from '@/context/TrendModeContext';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { toast } from 'sonner';
 
 export default function Forecasting() {
   const { trendMode } = useTrendMode();
   const [forecast, setForecast] = useState(null);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState('daily'); // daily or weekly
+  const [showReportDialog, setShowReportDialog] = useState(false);
+  const [selectedBarIndex, setSelectedBarIndex] = useState(null);
 
   useEffect(() => { loadForecast(); }, []);
   useEffect(() => {
     setViewMode(trendMode === 'weekly' ? 'weekly' : 'daily');
   }, [trendMode]);
+
+  useEffect(() => {
+    setSelectedBarIndex(null);
+  }, [viewMode, forecast]);
 
   async function loadForecast() {
     setLoading(true);
@@ -82,6 +91,13 @@ export default function Forecasting() {
         : 'MID CYCLE'
     : 'N/A';
   const peakIndex = chartData.findIndex((point) => point.date === peakDay?.date);
+  const highlightedIndex = peakIndex >= 0
+    ? peakIndex
+    : chartData.findIndex((point) => point.date === highestPoint?.date);
+  const selectedPoint = selectedBarIndex != null ? chartData[selectedBarIndex] : null;
+  const selectedOffset = selectedBarIndex != null && chartData.length > 1
+    ? Math.min(92, Math.max(8, (selectedBarIndex / (chartData.length - 1)) * 100))
+    : null;
   const peakOffset = peakIndex >= 0 && chartData.length > 1
     ? Math.min(88, Math.max(12, (peakIndex / (chartData.length - 1)) * 100))
     : 50;
@@ -90,6 +106,77 @@ export default function Forecasting() {
         .map((ratio) => chartData[Math.min(chartData.length - 1, Math.round((chartData.length - 1) * ratio))])
         .filter(Boolean)
     : [];
+
+  const reportText = [
+    'FinFusion Forecast Report',
+    '',
+    `Projected spending over ${forecastPoints.length || 30} days: ${formatCurrency(totalPredicted)}`,
+    `Trend: ${trendLabel} (${trendPct >= 0 ? '+' : ''}${trendPct.toFixed(1)}%)`,
+    `Method: ${methodLabel}`,
+    `Confidence: ${(confidence * 100).toFixed(0)}%`,
+    `Peak day: ${peakDateLabel}${peakDay?.predicted_amount ? ` at ${formatCurrency(peakDay.predicted_amount)}` : ''}`,
+    `30-day average: ${formatCurrency(avgDaily30)}`,
+    `7-day average: ${formatCurrency(avgDaily7)}`,
+    '',
+    'AI Insights',
+    ...(aiInsights.length > 0
+      ? aiInsights.map((insight, idx) => `${idx + 1}. ${insight.title}: ${insight.message}`)
+      : ['1. No AI insights available yet.']),
+    '',
+    'Full Category Breakdown',
+    ...(topCategories.length > 0
+      ? topCategories.map((cat, idx) =>
+          `${idx + 1}. ${cat.category}: ${formatCurrency(cat.projected_amount)}${cat.budget_cap > 0 ? ` (${Math.min(cat.cap_utilization || 0, 100).toFixed(0)}% of cap)` : ''}`
+        )
+      : ['1. No category data available.']),
+    '',
+    'Last Month Context',
+    lastMonthContext
+      ? `${lastMonthContext.label}. Change: ${lastMonthContext.change_pct >= 0 ? '+' : ''}${lastMonthContext.change_pct}%`
+      : 'No prior context available.',
+    '',
+    `Generated on ${new Date().toLocaleString('en-IN')}`,
+  ].join('\n');
+
+  async function handleCopyReport() {
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(reportText);
+      } else {
+        const textArea = document.createElement('textarea');
+        textArea.value = reportText;
+        textArea.setAttribute('readonly', '');
+        textArea.style.position = 'fixed';
+        textArea.style.opacity = '0';
+        textArea.style.pointerEvents = 'none';
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        const copied = document.execCommand('copy');
+        document.body.removeChild(textArea);
+        if (!copied) {
+          throw new Error('Fallback copy failed');
+        }
+      }
+      toast.success('Forecast report copied');
+    } catch (error) {
+      window.prompt('Copy the forecast report text below:', reportText);
+      toast.success('Opened plain text report for manual copy');
+    }
+  }
+
+  function handleDownloadReport() {
+    const blob = new Blob([reportText], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `finfusion-forecast-report-${new Date().toISOString().slice(0, 10)}.txt`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    toast.success('Forecast report downloaded');
+  }
 
   return (
     <div className="min-h-screen bg-surface-container">
@@ -134,17 +221,6 @@ export default function Forecasting() {
             <div className="text-base text-on-surface/70 font-body">
               Confidence: <span className="font-bold text-[#630ed4]">{(confidence * 100).toFixed(0)}%</span>
             </div>
-            {/* ML Model Indicator */}
-            {forecast?.metadata?.is_ml_model === false && (
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-100 border border-amber-300">
-                <svg className="w-3 h-3 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                </svg>
-                <span className="text-xs font-bold text-amber-700 font-body">
-                  Using statistical fallback (insufficient data for ML)
-                </span>
-              </div>
-            )}
           </div>
         </div>
 
@@ -192,7 +268,7 @@ export default function Forecasting() {
                 </div>
 
                 {/* Peak Day Callout */}
-                {peakDay?.date && viewMode === 'daily' && (
+                {peakDay?.date && viewMode === 'daily' && (selectedBarIndex == null || selectedBarIndex === highlightedIndex) && (
                   <div className="absolute top-8 z-10 -translate-x-1/2" style={{ left: `${peakOffset}%` }}>
                     <div className="bg-gradient-to-r from-[#630ed4] to-[#7c3aed] text-white px-4 py-2 rounded-xl shadow-[0_24px_48px_rgba(99,14,212,0.25)] flex flex-col items-center">
                       <span className="text-[10px] font-bold tracking-wider opacity-90 uppercase font-body">Peak Spending Day</span>
@@ -201,6 +277,16 @@ export default function Forecasting() {
                       </span>
                     </div>
                     <div className="w-[1px] h-32 bg-[#630ed4]/30 mx-auto mt-2 border-l border-dashed border-[#630ed4]" />
+                  </div>
+                )}
+
+                {viewMode === 'daily' && selectedPoint && selectedBarIndex !== highlightedIndex && selectedOffset != null && (
+                  <div className="absolute top-12 z-10 -translate-x-1/2 pointer-events-none" style={{ left: `${selectedOffset}%` }}>
+                    <div className="bg-[#4c1d95] text-white px-3 py-2 rounded-xl shadow-[0_20px_40px_rgba(76,29,149,0.28)]">
+                      <span className="text-sm font-headline font-bold tracking-tight whitespace-nowrap">
+                        {new Date(selectedPoint.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} • {formatCurrency(selectedPoint.predicted_amount || 0)}
+                      </span>
+                    </div>
                   </div>
                 )}
 
@@ -214,17 +300,21 @@ export default function Forecasting() {
                   <div className="flex items-end justify-between w-full h-[280px] px-4 gap-2 relative z-0">
                     {chartData.map((point, idx) => {
                       const heightPct = (point.predicted_amount / maxAmount) * 100;
-                      const isHighest = point.predicted_amount === highestPoint?.predicted_amount;
+                      const isSelected = idx === selectedBarIndex;
+                      const shouldShowPeakHighlight = selectedBarIndex == null && idx === highlightedIndex;
                       return (
                         <div 
                           key={idx}
                           className={`flex-1 rounded-t-sm transition-all cursor-pointer group ${
-                            isHighest 
+                            isSelected
+                              ? 'bg-[#4c1d95]'
+                              : shouldShowPeakHighlight 
                               ? 'bg-gradient-to-t from-[#630ed4] to-[#7c3aed]' 
                               : 'bg-surface-container-high hover:bg-[#630ed4]/40'
                           }`}
                           style={{ height: `${Math.max(heightPct, 2)}%` }}
                           title={`${point.date}: ${formatCurrency(point.predicted_amount)}`}
+                          onClick={() => setSelectedBarIndex(idx)}
                         >
                           <div className="opacity-0 group-hover:opacity-100 transition-opacity absolute -top-8 left-1/2 -translate-x-1/2 bg-on-surface text-white text-xs px-2 py-1 rounded whitespace-nowrap pointer-events-none">
                             {formatCurrency(point.predicted_amount)}
@@ -254,40 +344,42 @@ export default function Forecasting() {
 
             {/* Detailed Stats Grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-              <div className="bg-surface-container-lowest p-5 sm:p-6 rounded-[1rem] border border-outline-variant/10">
+              <div className="bg-surface-container-lowest p-5 sm:p-6 rounded-[1rem] border border-outline-variant/10 min-w-0">
                 <p className="text-[10px] font-bold text-on-surface/50 uppercase tracking-wider mb-2 font-body">30-day Avg</p>
-                <p className="text-3xl font-headline font-bold text-on-surface tracking-tight">{formatCurrency(avgDaily30)}</p>
+                <p className="text-3xl font-headline font-bold text-on-surface tracking-tight break-words leading-[1.05]">{formatCurrency(avgDaily30)}</p>
                 <div className={`mt-3 flex items-center gap-1 text-[10px] font-bold ${avgChangeUp ? 'text-[#ef4444]' : 'text-[#630ed4]'} font-body`}>
                   {avgChangeUp ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-                  {avgChangePct >= 0 ? '+' : ''}{avgChangePct.toFixed(1)}% vs 7D
+                  Baseline from last 30 days
                 </div>
               </div>
 
-              <div className="bg-surface-container-lowest p-5 sm:p-6 rounded-[1rem] border border-outline-variant/10">
+              <div className="bg-surface-container-lowest p-5 sm:p-6 rounded-[1rem] border border-outline-variant/10 min-w-0">
                 <p className="text-[10px] font-bold text-on-surface/50 uppercase tracking-wider mb-2 font-body">7-day Avg</p>
-                <p className="text-3xl font-headline font-bold text-on-surface tracking-tight">{formatCurrency(avgDaily7)}</p>
+                <p className="text-3xl font-headline font-bold text-on-surface tracking-tight break-words leading-[1.05]">{formatCurrency(avgDaily7)}</p>
                 <div className="mt-3 flex items-center gap-1 text-[10px] font-bold text-[#630ed4] font-body">
                   {slopePerDay >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-                  Slope {slopePerDay >= 0 ? '+' : ''}{slopePerDay.toFixed(0)}/day
+                  {avgChangePct >= 0 ? '+' : ''}{avgChangePct.toFixed(1)}% vs 30D avg
                 </div>
               </div>
 
-              <div className="bg-surface-container-lowest p-5 sm:p-6 rounded-[1rem] border border-outline-variant/10">
+              <div className="bg-surface-container-lowest p-5 sm:p-6 rounded-[1rem] border border-outline-variant/10 min-w-0">
                 <p className="text-[10px] font-bold text-on-surface/50 uppercase tracking-wider mb-2 font-body">Forecast Trend</p>
-                <p className="text-3xl font-headline font-bold text-on-surface tracking-tight">{trendLabel}</p>
+                <p className="text-3xl font-headline font-bold text-on-surface tracking-tight break-words leading-[1.05]">{trendLabel}</p>
                 <div className="mt-3 flex items-center gap-1 text-[10px] font-bold text-[#630ed4] font-body">
                   <svg className="w-3 h-3" viewBox="0 0 16 16" fill="currentColor">
                     <circle cx="8" cy="8" r="6" />
                     <path d="M6 8l2 2 4-4" stroke="white" strokeWidth="1.5" fill="none" strokeLinecap="round" />
                   </svg>
-                  {(confidence * 100).toFixed(0)}% confidence
+                  {slopePerDay >= 0 ? '+' : ''}{slopePerDay.toFixed(0)}/day slope
                 </div>
               </div>
 
-              <div className="bg-surface-container-lowest p-5 sm:p-6 rounded-[1rem] border border-outline-variant/10">
+              <div className="bg-surface-container-lowest p-5 sm:p-6 rounded-[1rem] border border-outline-variant/10 min-w-0">
                 <p className="text-[10px] font-bold text-on-surface/50 uppercase tracking-wider mb-2 font-body">Peak Day</p>
-                <p className="text-3xl font-headline font-bold text-on-surface tracking-tight">{peakDateLabel}</p>
-                <p className="mt-3 text-[10px] font-bold text-on-surface/50 uppercase font-body">{peakCycle}</p>
+                <p className="text-3xl font-headline font-bold text-on-surface tracking-tight break-words leading-[1.05]">{peakDateLabel}</p>
+                <p className="mt-3 text-[10px] font-bold text-on-surface/50 uppercase font-body">
+                  {peakDay?.predicted_amount ? `${formatCurrency(peakDay.predicted_amount)} • ${peakCycle}` : peakCycle}
+                </p>
               </div>
             </div>
           </section>
@@ -326,7 +418,10 @@ export default function Forecasting() {
                 )}
               </div>
 
-              <button className="mt-4 w-full py-2.5 rounded-lg bg-gradient-to-r from-[#630ed4] to-[#7c3aed] text-white text-xs font-bold uppercase tracking-wide hover:shadow-lg transition-all font-body">
+              <button
+                onClick={() => setShowReportDialog(true)}
+                className="mt-4 w-full py-2.5 rounded-lg bg-gradient-to-r from-[#630ed4] to-[#7c3aed] text-white text-xs font-bold uppercase tracking-wide hover:shadow-lg transition-all font-body"
+              >
                 Generate Full Report
               </button>
             </div>
@@ -391,6 +486,82 @@ export default function Forecasting() {
           </aside>
         </div>
       </main>
+
+      <Dialog open={showReportDialog} onOpenChange={setShowReportDialog}>
+        <DialogContent className="w-[min(92vw,960px)] max-w-3xl max-h-[88vh] overflow-hidden rounded-[24px] p-0">
+          <div className="max-h-[88vh] overflow-y-auto px-6 py-6 sm:px-7">
+          <DialogHeader>
+            <DialogTitle>Forecast Report</DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-5">
+            <div className="rounded-[20px] border border-violet-100 bg-gradient-to-r from-violet-50 via-white to-fuchsia-50 p-5">
+              <h3 className="text-xl font-bold text-slate-900">Projected spending: <span className="text-[#630ed4]">{formatCurrency(totalPredicted)}</span></h3>
+              <p className="text-sm text-slate-600 mt-2">
+                {forecastPoints.length || 30}-day report with trend, peak day, category pressure, and forecast commentary.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="rounded-2xl border border-slate-200 p-4">
+                <p className="text-xs font-bold uppercase tracking-[0.14em] text-slate-400">Trend</p>
+                <p className="text-lg font-bold text-slate-900 mt-2">{trendLabel}</p>
+                <p className="text-sm text-[#630ed4] mt-1">{trendPct >= 0 ? '+' : ''}{trendPct.toFixed(1)}%</p>
+              </div>
+              <div className="rounded-2xl border border-slate-200 p-4">
+                <p className="text-xs font-bold uppercase tracking-[0.14em] text-slate-400">Peak Day</p>
+                <p className="text-lg font-bold text-slate-900 mt-2">{peakDateLabel}</p>
+                <p className="text-sm text-[#630ed4] mt-1">{peakDay?.predicted_amount ? formatCurrency(peakDay.predicted_amount) : 'N/A'}</p>
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-slate-200 p-4">
+              <h4 className="text-sm font-bold text-slate-900 mb-3">AI Insights Summary</h4>
+              <div className="space-y-3">
+                {aiInsights.length > 0 ? aiInsights.map((insight, idx) => (
+                  <div key={idx} className="rounded-xl bg-slate-50 p-3">
+                    <p className="text-sm font-semibold text-slate-900">{insight.title}</p>
+                    <p className="text-sm text-slate-600 mt-1">{insight.message}</p>
+                  </div>
+                )) : (
+                  <p className="text-sm text-slate-500">No AI insights available yet.</p>
+                )}
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-slate-200 p-4">
+              <h4 className="text-sm font-bold text-slate-900 mb-3">Full Category Breakdown</h4>
+              <div className="space-y-2">
+                {topCategories.length > 0 ? topCategories.map((cat, idx) => (
+                  <div key={idx} className="flex items-center justify-between gap-3 text-sm">
+                    <span className="font-medium text-slate-700">{cat.category}</span>
+                    <span className="font-semibold text-[#630ed4]">{formatCurrency(cat.projected_amount)}</span>
+                  </div>
+                )) : (
+                  <p className="text-sm text-slate-500">No category data available.</p>
+                )}
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-slate-200 p-4">
+              <h4 className="text-sm font-bold text-slate-900 mb-3">Full Report Text</h4>
+              <pre className="max-h-72 overflow-y-auto whitespace-pre-wrap rounded-xl bg-slate-50 p-4 text-sm leading-6 text-slate-600 font-sans">
+                {reportText}
+              </pre>
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-3">
+              <Button type="button" onClick={handleCopyReport} className="flex-1 rounded-xl bg-gradient-to-r from-[#630ed4] to-[#7c3aed] text-white">
+                Copy Report
+              </Button>
+              <Button type="button" onClick={handleDownloadReport} variant="outline" className="flex-1 rounded-xl">
+                Download Report
+              </Button>
+            </div>
+          </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

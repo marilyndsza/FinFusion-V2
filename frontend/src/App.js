@@ -10,6 +10,7 @@ import Login from './pages/Login';
 import { isAuthenticated } from './lib/auth';
 import CursorAura from './components/CursorAura';
 import { TrendModeProvider } from './context/TrendModeContext';
+import { Toaster } from './components/ui/sonner';
 
 function ProtectedRoute({ children }) {
   return isAuthenticated() ? children : <Navigate to="/login" />;
@@ -30,6 +31,7 @@ function App() {
             <Route path="/insights" element={<ProtectedRoute><Insights /></ProtectedRoute>} />
           </Routes>
         </BrowserRouter>
+        <Toaster richColors position="top-right" />
       </TrendModeProvider>
     </div>
   );

@@ -373,31 +373,31 @@ export default function SplitwiseModule({ primaryPersonId = null, initialGroups 
       </header>
 
       {/* MAIN CONTENT */}
-      <div className="container mx-auto py-8 px-6 max-w-6xl">
-        <header className="flex items-center justify-between mb-8">
+      <div className="container mx-auto py-6 sm:py-8 px-4 sm:px-6 lg:px-8 max-w-6xl">
+        <header className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4">
           <div>
             <h1 className="text-3xl font-extrabold tracking-tight text-gray-900">Groups</h1>
             <p className="text-sm text-gray-500 mt-1">Manage group expenses, track balances, and settle up with ease.</p>
           </div>
-          <div className="flex items-center gap-3">
-            <button onClick={() => setShowNewGroupDialog(true)} className="inline-flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-4 py-2 rounded-xl shadow-md hover:shadow-lg transition"> 
+          <div className="flex items-center gap-3 w-full sm:w-auto">
+            <button onClick={() => setShowNewGroupDialog(true)} className="inline-flex w-full sm:w-auto justify-center items-center gap-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-4 py-2 rounded-xl shadow-md hover:shadow-lg transition"> 
               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" /></svg>
               New group
             </button>
           </div>
         </header>
 
-        <div className="grid grid-cols-4 gap-6">
-          <aside className="col-span-1 sticky top-6">
+        <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
+          <aside className="xl:col-span-1 xl:sticky xl:top-6 self-start">
             <div className="bg-white rounded-2xl p-4 shadow-md">
               <h3 className="text-sm font-medium mb-2">Your groups</h3>
               <ul className="space-y-2">
                 {groups.length > 0 ? (
                   groups.map((g) => (
-                  <li key={g.id} className={`flex items-center justify-between p-2 rounded-lg transition ${g.id === selectedGroupId ? 'bg-indigo-50 ring-1 ring-indigo-200' : 'hover:bg-gray-50'}`}>
+                  <li key={g.id} className={`flex items-center justify-between gap-3 p-2.5 rounded-lg transition ${g.id === selectedGroupId ? 'bg-indigo-50 ring-1 ring-indigo-200' : 'hover:bg-gray-50'}`}>
                     <div className="flex-1 cursor-pointer" onClick={() => setSelectedGroupId(g.id)}>
-                      <div className="text-sm font-semibold">{g.name}</div>
-                      <div className="text-xs text-gray-400">{g.people.length} members • {g.expenses.length} expenses</div>
+                      <div className="text-sm font-semibold break-words leading-5">{g.name}</div>
+                      <div className="text-xs text-gray-400 break-words">{g.people.length} members • {g.expenses.length} expenses</div>
                     </div>
                     <div className="flex items-center gap-2">
                       <button
@@ -428,27 +428,27 @@ export default function SplitwiseModule({ primaryPersonId = null, initialGroups 
 
           </aside>
 
-          <main className="col-span-3">
+          <main className="xl:col-span-3 min-w-0">
             {currentGroup ? (
               <>
             <div className="bg-white rounded-2xl p-5 shadow-lg mb-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-xl font-semibold">{currentGroup.name}</h2>
+              <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+                <div className="min-w-0">
+                  <h2 className="text-xl font-semibold break-words">{currentGroup.name}</h2>
                   <div className="text-sm text-gray-400 mt-1">{currentGroup.people.length} members • {currentGroup.expenses.length} expenses</div>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 md:shrink-0">
                   <div className="text-sm text-gray-500">Group total</div>
                   <div className="text-2xl font-extrabold text-indigo-600">₹{groupTotalExpenses.toFixed(2)}</div>
                 </div>
               </div>
 
-              <div className="mt-4 flex flex-wrap gap-3">
+              <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
                 {currentGroup.people.map((p) => (
-                  <div key={p.id} className={`flex items-center gap-3 p-3 rounded-xl ${primaryPersonId === p.id ? 'ring-2 ring-indigo-200 bg-indigo-50' : 'bg-gray-50'} shadow-sm`}> 
+                  <div key={p.id} className={`flex items-center gap-3 p-3 rounded-xl min-w-0 ${primaryPersonId === p.id ? 'ring-2 ring-indigo-200 bg-indigo-50' : 'bg-gray-50'} shadow-sm`}> 
                     <AvatarBadge name={p.name} size="lg" />
-                    <div>
-                      <div className="text-sm font-medium">{p.name}</div>
+                    <div className="min-w-0">
+                      <div className="text-sm font-medium break-words leading-5">{p.name}</div>
                       <div className={`text-xs ${groupBalances[p.id] > 0 ? 'text-green-600' : 'text-orange-600'}`}>{groupBalances[p.id] ? (groupBalances[p.id] > 0 ? `+₹${groupBalances[p.id].toFixed(2)}` : `-₹${Math.abs(groupBalances[p.id]).toFixed(2)}`) : '₹0.00'}</div>
                     </div>
                   </div>
@@ -456,8 +456,8 @@ export default function SplitwiseModule({ primaryPersonId = null, initialGroups 
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-6">
-              <section className="bg-white rounded-2xl p-5 shadow-md h-[620px] flex flex-col">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <section className="bg-white rounded-2xl p-5 shadow-md min-h-[620px] lg:h-[620px] flex flex-col">
                 <h3 className="font-semibold mb-3">Add expense</h3>
                 <div className="space-y-3 flex-1 min-h-0 flex flex-col">
                   <input value={newExpenseTitle} onChange={(e)=>setNewExpenseTitle(e.target.value)} placeholder="Title" className="w-full border border-gray-200 rounded-lg p-2" />
@@ -481,7 +481,7 @@ export default function SplitwiseModule({ primaryPersonId = null, initialGroups 
                     <div className="space-y-2">
                       {currentGroup.people.map((p)=> (
                         <div key={p.id} className="flex items-center gap-2">
-                          <div className="w-28 text-sm">{p.name}</div>
+                          <div className="w-24 sm:w-28 text-sm break-words leading-5">{p.name}</div>
                           <input placeholder="share" value={customSplits[p.id]||''} onChange={(e)=>setCustomSplits(s=>({ ...s, [p.id]: e.target.value }))} className="border p-2 rounded flex-1" />
                         </div>
                       ))}
@@ -493,7 +493,7 @@ export default function SplitwiseModule({ primaryPersonId = null, initialGroups 
                     <button onClick={resetExpenseForm} className="px-4 py-2 rounded-lg bg-gray-100">Reset</button>
                     <button
                       onClick={() => setShowReceiptDialog(true)}
-                      className="ml-auto inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-[#6d4cff] via-[#9345f9] to-[#f26ab3] text-white font-medium shadow-[0_14px_28px_rgba(147,69,249,0.28)] hover:scale-[1.01] transition"
+                      className="w-full sm:w-auto sm:ml-auto inline-flex justify-center items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-[#6d4cff] via-[#9345f9] to-[#f26ab3] text-white font-medium shadow-[0_14px_28px_rgba(147,69,249,0.28)] hover:scale-[1.01] transition"
                     >
                       <Upload className="w-4 h-4" />
                       Scan Receipt
@@ -506,9 +506,9 @@ export default function SplitwiseModule({ primaryPersonId = null, initialGroups 
                   <div className="flex-1 min-h-0 overflow-hidden">
                   <ul className="divide-y mt-2 h-full overflow-y-auto pr-1">
                     {currentGroup.expenses.map((e)=> (
-                      <li key={e.id} className="py-3 flex items-start justify-between">
-                        <div>
-                          <div className="font-semibold">{e.title} <span className="text-sm text-gray-400">• ₹{Number(e.amount).toFixed(2)}</span></div>
+                      <li key={e.id} className="py-3 flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="font-semibold break-words leading-6">{e.title} <span className="text-sm text-gray-400">• ₹{Number(e.amount).toFixed(2)}</span></div>
                           <div className="text-xs text-gray-400">paid by {nameOf(e.paidBy)}</div>
                         </div>
                         <div className="flex items-center gap-2">
@@ -521,19 +521,19 @@ export default function SplitwiseModule({ primaryPersonId = null, initialGroups 
                 </div>
               </section>
 
-              <section className="bg-white rounded-2xl p-5 shadow-md">
-                <div className="flex items-center justify-between mb-3">
+              <section className="bg-white rounded-2xl p-5 shadow-md min-w-0">
+                <div className="flex items-center justify-between gap-3 mb-3">
                   <h3 className="font-semibold">Balances & Settlements</h3>
                   <button onClick={exportGroupSimplified} className="text-sm px-3 py-1 rounded-lg bg-indigo-600 text-white">Copy</button>
                 </div>
 
                 <div className="space-y-3">
                   {currentGroup.people.map((p)=> (
-                    <div key={p.id} className="flex items-center justify-between p-3 rounded-lg border">
-                      <div className="flex items-center gap-3">
+                    <div key={p.id} className="flex items-center justify-between gap-3 p-3 rounded-lg border">
+                      <div className="flex items-center gap-3 min-w-0">
                         <AvatarBadge name={p.name} />
-                        <div>
-                          <div className="font-medium">{p.name}</div>
+                        <div className="min-w-0">
+                          <div className="font-medium break-words leading-5">{p.name}</div>
                           <div className="text-xs text-gray-400">{p.id === newExpensePaidBy ? 'recent payer' : ''}</div>
                         </div>
                       </div>
@@ -546,12 +546,12 @@ export default function SplitwiseModule({ primaryPersonId = null, initialGroups 
                     {groupTransactions.length ? (
                       <ul className="space-y-2">
                         {groupTransactions.map((t, idx) => (
-                          <li key={idx} className="flex items-center justify-between p-3 border rounded-lg">
-                            <div className="flex items-center gap-3">
+                          <li key={idx} className="flex items-center justify-between gap-3 p-3 border rounded-lg">
+                            <div className="flex items-center gap-3 min-w-0">
                               <AvatarBadge name={nameOf(t.from)} size="sm" />
-                              <div className="text-sm">{nameOf(t.from)} pays <span className="font-semibold">{nameOf(t.to)}</span></div>
+                              <div className="text-sm break-words leading-5">{nameOf(t.from)} pays <span className="font-semibold">{nameOf(t.to)}</span></div>
                             </div>
-                            <div className="font-semibold">₹{t.amount.toFixed(2)}</div>
+                            <div className="font-semibold shrink-0">₹{t.amount.toFixed(2)}</div>
                           </li>
                         ))}
                       </ul>

@@ -990,7 +990,7 @@ class InsightsEngine:
         category_caps['cap'] = category_caps['mean'] + category_caps['std']
 
         result = []
-        for category, amount in category_totals.head(4).items():
+        for category, amount in category_totals.items():
             share = float(amount / category_total)
             projected_amount = round(total_predicted * share, 2)
 
