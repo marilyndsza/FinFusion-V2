@@ -1,7 +1,17 @@
 import React, { useState, useMemo, useEffect } from "react";
+import { Loader2, Upload, User } from 'lucide-react';
+import axios from 'axios';
 import Navbar from '@/components/Navbar';
 import UserMenu from '@/components/UserMenu';
 import logo from '@/assets/logo.png';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue
+} from '@/components/ui/select';
+import { toast } from 'sonner';
+import { getAuthToken } from '@/lib/auth';
 
 /**
  * SplitwiseModule.jsx — Pretty UI upgrade
@@ -18,6 +28,9 @@ import logo from '@/assets/logo.png';
 function uid(prefix = "id") {
   return `${prefix}_${Math.random().toString(36).slice(2, 9)}`;
 }
+
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
+const API = `${BACKEND_URL}/api`;
 
 export function computeBalancesForGroup(people, expenses) {
   const balances = {};
@@ -80,24 +93,26 @@ export default function SplitwiseModule({ primaryPersonId = null, initialGroups 
       id: 'g1',
       name: 'Trip to Goa',
       people: [
-        { id: 'u1', name: 'Mel (you)' },
-        { id: 'u2', name: 'Asha' },
-        { id: 'u3', name: 'Riya' },
+        { id: 'u1', name: 'Marilyn (you)' },
+        { id: 'u2', name: 'Pooja' },
+        { id: 'u3', name: 'Parth' },
+        { id: 'u4', name: 'Yash' },
       ],
       expenses: [
-        { id: 'ex1', title: 'Beach dinner', amount: 4200, paidBy: 'u1', splits: [] },
-        { id: 'ex2', title: 'Boat ride', amount: 1500, paidBy: 'u2', splits: [] },
+        { id: 'ex1', title: 'Beach lunch', amount: 2400, paidBy: 'u1', splits: [] },
+        { id: 'ex2', title: 'Cab to hotel', amount: 1200, paidBy: 'u3', splits: [] },
       ],
     },
     {
       id: 'g2',
       name: 'Apartment Utilities',
       people: [
-        { id: 'u1', name: 'Mel (you)' },
-        { id: 'u4', name: 'Sam' },
+        { id: 'u1', name: 'Marilyn (you)' },
+        { id: 'u2', name: 'Pooja' },
       ],
       expenses: [
-        { id: 'ex3', title: 'Electricity', amount: 1200, paidBy: 'u4', splits: [] },
+        { id: 'ex3', title: 'Electricity bill', amount: 1800, paidBy: 'u2', splits: [] },
+        { id: 'ex4', title: 'Wi-Fi recharge', amount: 900, paidBy: 'u1', splits: [] },
       ],
     },
   ];
@@ -105,13 +120,25 @@ export default function SplitwiseModule({ primaryPersonId = null, initialGroups 
   const [groups, setGroups] = useState(initialGroups || sampleGroups);
   const [selectedGroupId, setSelectedGroupId] = useState((initialGroups && initialGroups[0]?.id) || groups[0]?.id || null);
 
+  const [showNewGroupDialog, setShowNewGroupDialog] = useState(false);
   const [newGroupName, setNewGroupName] = useState('');
-  const [newPersonName, setNewPersonName] = useState('');
+  const [newGroupMembers, setNewGroupMembers] = useState([]);
+  const [newGroupMemberName, setNewGroupMemberName] = useState('');
   const [newExpenseTitle, setNewExpenseTitle] = useState('');
   const [newExpenseAmount, setNewExpenseAmount] = useState('');
   const [newExpensePaidBy, setNewExpensePaidBy] = useState('');
   const [useCustomSplits, setUseCustomSplits] = useState(false);
   const [customSplits, setCustomSplits] = useState({});
+  const [showReceiptDialog, setShowReceiptDialog] = useState(false);
+  const [receiptScanning, setReceiptScanning] = useState(false);
+  const [groupReceiptData, setGroupReceiptData] = useState({
+    title: '',
+    amount: '',
+    paidBy: '',
+    useCustomSplits: false,
+    customSplits: {},
+  });
+  const [groupReceiptMeta, setGroupReceiptMeta] = useState(null);
 
   useEffect(() => {
     if (onChange) onChange(groups);
@@ -132,25 +159,25 @@ export default function SplitwiseModule({ primaryPersonId = null, initialGroups 
     return simplifyDebts(groupBalances);
   }, [currentGroup, groupBalances]);
 
-  const overall = useMemo(() => {
-    const totalBalances = {};
-    groups.forEach((g) => {
-      const b = computeBalancesForGroup(g.people, g.expenses);
-      Object.entries(b).forEach(([id, bal]) => {
-        totalBalances[id] = (totalBalances[id] || 0) + bal;
-      });
-    });
-    Object.keys(totalBalances).forEach((k) => (totalBalances[k] = Math.round((totalBalances[k] + Number.EPSILON) * 100) / 100));
-    return totalBalances;
-  }, [groups]);
+  const groupTotalExpenses = useMemo(() => {
+    if (!currentGroup) return 0;
+    return currentGroup.expenses.reduce((sum, expense) => sum + (Number(expense.amount) || 0), 0);
+  }, [currentGroup]);
 
   function addGroup() {
     const name = newGroupName.trim();
     if (!name) return;
-    const g = { id: uid('g'), name, people: [], expenses: [] };
+    const uniqueMembers = newGroupMembers.filter(Boolean).map((memberName) => ({
+      id: uid('u'),
+      name: memberName,
+    }));
+    const g = { id: uid('g'), name, people: uniqueMembers, expenses: [] };
     setGroups((s) => [...s, g]);
     setSelectedGroupId(g.id);
     setNewGroupName('');
+    setNewGroupMembers([]);
+    setNewGroupMemberName('');
+    setShowNewGroupDialog(false);
   }
 
   function removeGroup(groupId) {
@@ -161,34 +188,139 @@ export default function SplitwiseModule({ primaryPersonId = null, initialGroups 
     }
   }
 
-  function addPersonToCurrent(name) {
-    const n = (name || newPersonName).trim();
-    if (!n) return;
-    const p = { id: uid('u'), name: n };
-    setGroups((gs) => gs.map((g) => (g.id === currentGroup.id ? { ...g, people: [...g.people, p] } : g)));
-    setNewPersonName('');
+  function addMemberToNewGroup() {
+    const name = newGroupMemberName.trim();
+    if (!name) return;
+    if (newGroupMembers.some((member) => member.toLowerCase() === name.toLowerCase())) return;
+    setNewGroupMembers((members) => [...members, name]);
+    setNewGroupMemberName('');
+  }
+
+  function removeMemberFromNewGroup(name) {
+    setNewGroupMembers((members) => members.filter((member) => member !== name));
+  }
+
+  function buildSplits(amount, customEnabled, customState) {
+    if (!currentGroup) return [];
+    if (customEnabled) {
+      return currentGroup.people.map((p) => ({ personId: p.id, share: Number(customState[p.id] || 0) }));
+    }
+    const each = Math.round((amount / Math.max(1, currentGroup.people.length) + Number.EPSILON) * 100) / 100;
+    return currentGroup.people.map((p) => ({ personId: p.id, share: each }));
+  }
+
+  function validateCustomSplits(amount, customState) {
+    const total = Object.values(customState).reduce((sum, value) => sum + (Number(value) || 0), 0);
+    return Math.abs(total - amount) < 0.01;
+  }
+
+  function resetExpenseForm() {
+    setNewExpenseTitle('');
+    setNewExpenseAmount('');
+    setNewExpensePaidBy('');
+    setUseCustomSplits(false);
+    setCustomSplits({});
+  }
+
+  function resetReceiptDialog() {
+    setShowReceiptDialog(false);
+    setReceiptScanning(false);
+    setGroupReceiptMeta(null);
+    setGroupReceiptData({
+      title: '',
+      amount: '',
+      paidBy: '',
+      useCustomSplits: false,
+      customSplits: {},
+    });
   }
 
   function addExpenseToCurrent() {
     const amount = Number(newExpenseAmount);
     if (!newExpenseTitle.trim() || !amount || isNaN(amount)) return alert('provide title and valid amount');
     if (!newExpensePaidBy) return alert('choose payer');
+    if (useCustomSplits && !validateCustomSplits(amount, customSplits)) return alert('custom splits must add up to the expense amount');
 
-    let splits = [];
-    if (useCustomSplits) {
-      splits = currentGroup.people.map((p) => ({ personId: p.id, share: Number(customSplits[p.id] || 0) }));
-    } else {
-      const each = Math.round((amount / Math.max(1, currentGroup.people.length) + Number.EPSILON) * 100) / 100;
-      splits = currentGroup.people.map((p) => ({ personId: p.id, share: each }));
-    }
-
+    const splits = buildSplits(amount, useCustomSplits, customSplits);
     const exp = { id: uid('e'), title: newExpenseTitle.trim(), amount, paidBy: newExpensePaidBy, splits };
     setGroups((gs) => gs.map((g) => (g.id === currentGroup.id ? { ...g, expenses: [...g.expenses, exp] } : g)));
+    resetExpenseForm();
+  }
 
-    setNewExpenseTitle('');
-    setNewExpenseAmount('');
-    setUseCustomSplits(false);
-    setCustomSplits({});
+  async function handleGroupReceiptSelect(e) {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please upload an image receipt');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Receipt image must be under 5MB');
+      return;
+    }
+
+    setReceiptScanning(true);
+    try {
+      const form = new FormData();
+      form.append('file', file);
+      const response = await axios.post(`${API}/expenses/scan-receipt`, form, {
+        headers: {
+          Authorization: `Bearer ${getAuthToken()}`,
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      if (!response.data?.success) {
+        throw new Error(response.data?.error || 'Could not read receipt');
+      }
+
+      const extracted = response.data.extracted || {};
+      setGroupReceiptMeta({
+        confidence: response.data.confidence || 0,
+        merchant: extracted.merchant || '',
+        rawTextPreview: response.data.raw_text_preview || '',
+      });
+      setGroupReceiptData((prev) => ({
+        ...prev,
+        title: extracted.description || extracted.merchant || prev.title,
+        amount: extracted.amount?.toString() || prev.amount,
+      }));
+      toast.success('Receipt scanned for group expense');
+    } catch (error) {
+      console.error('Group receipt scan error:', error);
+      toast.error(error.response?.data?.detail || error.message || 'Failed to scan receipt');
+    } finally {
+      setReceiptScanning(false);
+    }
+  }
+
+  function confirmGroupReceiptExpense() {
+    const amount = Number(groupReceiptData.amount);
+    if (!groupReceiptData.title.trim() || !amount || isNaN(amount)) {
+      toast.error('Please confirm the title and amount');
+      return;
+    }
+    if (!groupReceiptData.paidBy) {
+      toast.error('Please choose the payer');
+      return;
+    }
+    if (groupReceiptData.useCustomSplits && !validateCustomSplits(amount, groupReceiptData.customSplits)) {
+      toast.error('Custom splits need to add up to the receipt total');
+      return;
+    }
+
+    const splits = buildSplits(amount, groupReceiptData.useCustomSplits, groupReceiptData.customSplits);
+    const exp = {
+      id: uid('e'),
+      title: groupReceiptData.title.trim(),
+      amount,
+      paidBy: groupReceiptData.paidBy,
+      splits,
+    };
+    setGroups((gs) => gs.map((g) => (g.id === currentGroup.id ? { ...g, expenses: [...g.expenses, exp] } : g)));
+    toast.success('Group expense added from receipt');
+    resetReceiptDialog();
   }
 
   function removeExpenseFromCurrent(expId) {
@@ -210,17 +342,31 @@ export default function SplitwiseModule({ primaryPersonId = null, initialGroups 
     navigator.clipboard?.writeText(text).then(() => alert('Copied group simplified transactions'), () => alert('Copy failed'));
   }
 
-  // small helpers for avatar
-  function avatarInitials(name) {
-    return name.split(' ').map((s) => s[0]).slice(0, 2).join('').toUpperCase();
+  function getAvatarVisual(name) {
+    return {
+      Icon: User,
+      tone: 'bg-indigo-50 text-indigo-500',
+    };
+  }
+
+  function AvatarBadge({ name, size = 'md' }) {
+    const { Icon, tone } = getAvatarVisual(name);
+    const sizeClass = size === 'lg' ? 'w-12 h-12' : size === 'sm' ? 'w-9 h-9' : 'w-10 h-10';
+    const iconClass = size === 'lg' ? 'w-5 h-5' : 'w-[18px] h-[18px]';
+
+    return (
+      <div className={`${sizeClass} rounded-full ${tone} flex items-center justify-center shadow-sm`}>
+        <Icon className={iconClass} strokeWidth={1.8} />
+      </div>
+    );
   }
 
   return (
     <div className="min-h-screen bg-[#f5f7fb]">
       {/* TOP NAVBAR */}
       <header className="sticky top-0 z-30 bg-white/80 backdrop-blur border-b border-slate-200">
-        <div className="container mx-auto px-6 py-3 flex items-center justify-between">
-          <img src={logo} alt="FinFusion logo" className="h-8 object-contain" />
+        <div className="container mx-auto px-6 sm:px-10 lg:px-14 py-4 flex items-center justify-between gap-5">
+          <img src={logo} alt="FinFusion logo" className="h-10 object-contain" />
           <Navbar />
           <UserMenu />
         </div>
@@ -234,11 +380,7 @@ export default function SplitwiseModule({ primaryPersonId = null, initialGroups 
             <p className="text-sm text-gray-500 mt-1">Manage group expenses, track balances, and settle up with ease.</p>
           </div>
           <div className="flex items-center gap-3">
-            <div className="text-right mr-4 hidden sm:block">
-              <div className="text-xs text-gray-500">Primary</div>
-              <div className="font-semibold">{primaryPersonId ? nameOf(primaryPersonId) : '—'}</div>
-            </div>
-            <button onClick={() => setNewGroupName('')} className="inline-flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-4 py-2 rounded-xl shadow-md hover:shadow-lg transition"> 
+            <button onClick={() => setShowNewGroupDialog(true)} className="inline-flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-4 py-2 rounded-xl shadow-md hover:shadow-lg transition"> 
               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" /></svg>
               New group
             </button>
@@ -278,36 +420,10 @@ export default function SplitwiseModule({ primaryPersonId = null, initialGroups 
                 ))
                 ) : (
                   <li className="text-center py-4 text-sm text-gray-400">
-                    No groups yet. Create one below!
+                    No groups yet. Create one from the button above.
                   </li>
                 )}
               </ul>
-
-              <div className="mt-4">
-                <input placeholder="New group name" value={newGroupName} onChange={(e) => setNewGroupName(e.target.value)} className="w-full border border-gray-200 rounded-lg p-2 text-sm" />
-                <button onClick={addGroup} className="mt-2 w-full py-2 rounded-lg bg-indigo-600 text-white font-medium">Create group</button>
-              </div>
-            </div>
-
-            <div className="mt-4 bg-white rounded-2xl p-4 shadow-md">
-              <h4 className="text-sm font-medium mb-2">Overall balances</h4>
-              <div className="grid grid-cols-1 gap-2">
-                {Object.entries(overall).length > 0 ? (
-                  Object.entries(overall).slice(0, 6).map(([id, bal]) => (
-                  <div key={id} className="flex items-center justify-between p-2 rounded-lg border">
-                    <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center text-sm font-semibold text-gray-700">{avatarInitials(nameOf(id))}</div>
-                      <div className="text-sm">{nameOf(id)}</div>
-                    </div>
-                    <div className={`font-semibold ${bal > 0 ? 'text-green-600' : 'text-orange-600'}`}>{bal > 0 ? `+₹${bal.toFixed(2)}` : `-₹${Math.abs(bal).toFixed(2)}`}</div>
-                  </div>
-                ))
-                ) : (
-                  <div className="text-center py-4 text-xs text-gray-400">
-                    No balances to show
-                  </div>
-                )}
-              </div>
             </div>
 
           </aside>
@@ -323,14 +439,14 @@ export default function SplitwiseModule({ primaryPersonId = null, initialGroups 
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="text-sm text-gray-500">Group total</div>
-                  <div className="text-2xl font-extrabold text-indigo-600">₹{Object.values(groupBalances).reduce((a,b)=>a+b,0).toFixed(2)}</div>
+                  <div className="text-2xl font-extrabold text-indigo-600">₹{groupTotalExpenses.toFixed(2)}</div>
                 </div>
               </div>
 
               <div className="mt-4 flex flex-wrap gap-3">
                 {currentGroup.people.map((p) => (
                   <div key={p.id} className={`flex items-center gap-3 p-3 rounded-xl ${primaryPersonId === p.id ? 'ring-2 ring-indigo-200 bg-indigo-50' : 'bg-gray-50'} shadow-sm`}> 
-                    <div className={`w-12 h-12 rounded-full flex items-center justify-center font-semibold ${primaryPersonId === p.id ? 'bg-indigo-600 text-white' : 'bg-white text-gray-700'} shadow`}>{avatarInitials(p.name)}</div>
+                    <AvatarBadge name={p.name} size="lg" />
                     <div>
                       <div className="text-sm font-medium">{p.name}</div>
                       <div className={`text-xs ${groupBalances[p.id] > 0 ? 'text-green-600' : 'text-orange-600'}`}>{groupBalances[p.id] ? (groupBalances[p.id] > 0 ? `+₹${groupBalances[p.id].toFixed(2)}` : `-₹${Math.abs(groupBalances[p.id]).toFixed(2)}`) : '₹0.00'}</div>
@@ -341,15 +457,23 @@ export default function SplitwiseModule({ primaryPersonId = null, initialGroups 
             </div>
 
             <div className="grid grid-cols-2 gap-6">
-              <section className="bg-white rounded-2xl p-5 shadow-md">
+              <section className="bg-white rounded-2xl p-5 shadow-md h-[620px] flex flex-col">
                 <h3 className="font-semibold mb-3">Add expense</h3>
-                <div className="space-y-3">
+                <div className="space-y-3 flex-1 min-h-0 flex flex-col">
                   <input value={newExpenseTitle} onChange={(e)=>setNewExpenseTitle(e.target.value)} placeholder="Title" className="w-full border border-gray-200 rounded-lg p-2" />
                   <input value={newExpenseAmount} onChange={(e)=>setNewExpenseAmount(e.target.value)} placeholder="Amount" className="w-full border border-gray-200 rounded-lg p-2" />
-                  <select value={newExpensePaidBy} onChange={(e)=>setNewExpensePaidBy(e.target.value)} className="w-full border border-gray-200 rounded-lg p-2">
-                    <option value="">Select payer</option>
-                    {currentGroup.people.map((p)=> <option key={p.id} value={p.id}>{p.name}</option>)}
-                  </select>
+                  <Select value={newExpensePaidBy} onValueChange={setNewExpensePaidBy}>
+                    <SelectTrigger className="w-full h-12 rounded-xl border border-violet-200 bg-gradient-to-r from-violet-50 via-white to-fuchsia-50 shadow-[0_12px_28px_rgba(139,92,246,0.12)] text-violet-900 text-base font-semibold data-[placeholder]:text-violet-900 [&>svg]:text-violet-700">
+                      <SelectValue placeholder="Select payer" />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-2xl border-0 bg-white shadow-[0_24px_60px_rgba(15,23,42,0.16)]">
+                      {currentGroup.people.map((p)=> (
+                        <SelectItem key={p.id} value={p.id} className="rounded-xl">
+                          {p.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
 
                   <label className="inline-flex items-center gap-2 text-sm"><input type="checkbox" checked={useCustomSplits} onChange={(e)=>setUseCustomSplits(e.target.checked)} /> Custom splits</label>
 
@@ -364,15 +488,23 @@ export default function SplitwiseModule({ primaryPersonId = null, initialGroups 
                     </div>
                   )}
 
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap gap-2 items-center">
                     <button onClick={addExpenseToCurrent} className="px-4 py-2 rounded-lg bg-gradient-to-r from-green-500 to-emerald-500 text-white font-medium shadow">Add</button>
-                    <button onClick={()=>{ setNewExpenseTitle(''); setNewExpenseAmount(''); setUseCustomSplits(false); setCustomSplits({}); }} className="px-4 py-2 rounded-lg bg-gray-100">Reset</button>
+                    <button onClick={resetExpenseForm} className="px-4 py-2 rounded-lg bg-gray-100">Reset</button>
+                    <button
+                      onClick={() => setShowReceiptDialog(true)}
+                      className="ml-auto inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-[#6d4cff] via-[#9345f9] to-[#f26ab3] text-white font-medium shadow-[0_14px_28px_rgba(147,69,249,0.28)] hover:scale-[1.01] transition"
+                    >
+                      <Upload className="w-4 h-4" />
+                      Scan Receipt
+                    </button>
                   </div>
 
                   <hr />
 
                   <h4 className="font-medium">Expenses</h4>
-                  <ul className="divide-y mt-2">
+                  <div className="flex-1 min-h-0 overflow-hidden">
+                  <ul className="divide-y mt-2 h-full overflow-y-auto pr-1">
                     {currentGroup.expenses.map((e)=> (
                       <li key={e.id} className="py-3 flex items-start justify-between">
                         <div>
@@ -385,6 +517,7 @@ export default function SplitwiseModule({ primaryPersonId = null, initialGroups 
                       </li>
                     ))}
                   </ul>
+                  </div>
                 </div>
               </section>
 
@@ -398,7 +531,7 @@ export default function SplitwiseModule({ primaryPersonId = null, initialGroups 
                   {currentGroup.people.map((p)=> (
                     <div key={p.id} className="flex items-center justify-between p-3 rounded-lg border">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-sm font-semibold">{avatarInitials(p.name)}</div>
+                        <AvatarBadge name={p.name} />
                         <div>
                           <div className="font-medium">{p.name}</div>
                           <div className="text-xs text-gray-400">{p.id === newExpensePaidBy ? 'recent payer' : ''}</div>
@@ -415,7 +548,7 @@ export default function SplitwiseModule({ primaryPersonId = null, initialGroups 
                         {groupTransactions.map((t, idx) => (
                           <li key={idx} className="flex items-center justify-between p-3 border rounded-lg">
                             <div className="flex items-center gap-3">
-                              <div className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center text-sm font-semibold">{avatarInitials(nameOf(t.from))}</div>
+                              <AvatarBadge name={nameOf(t.from)} size="sm" />
                               <div className="text-sm">{nameOf(t.from)} pays <span className="font-semibold">{nameOf(t.to)}</span></div>
                             </div>
                             <div className="font-semibold">₹{t.amount.toFixed(2)}</div>
@@ -428,14 +561,6 @@ export default function SplitwiseModule({ primaryPersonId = null, initialGroups 
                   </div>
                 </div>
               </section>
-            </div>
-
-            <div className="mt-6 bg-white rounded-2xl p-4 shadow-md">
-              <h4 className="font-semibold mb-3">Add member</h4>
-              <div className="flex gap-2">
-                <input value={newPersonName} onChange={(e)=>setNewPersonName(e.target.value)} placeholder="Name" className="border border-gray-200 p-2 rounded-lg flex-1" />
-                <button onClick={()=>addPersonToCurrent()} className="px-4 py-2 rounded-lg bg-indigo-600 text-white">Add</button>
-              </div>
             </div>
 
               </>
@@ -467,6 +592,201 @@ export default function SplitwiseModule({ primaryPersonId = null, initialGroups 
           </main>
         </div>
       </div>
+
+      <Dialog open={showNewGroupDialog} onOpenChange={setShowNewGroupDialog}>
+        <DialogContent className="rounded-[24px] sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Create New Group</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-2">
+            <div>
+              <label className="text-sm font-medium text-slate-700 mb-2 block">Group name</label>
+              <Input
+                placeholder="Trip to Manali"
+                value={newGroupName}
+                onChange={(e) => setNewGroupName(e.target.value)}
+                className="h-11 rounded-xl"
+              />
+            </div>
+
+            <div>
+              <label className="text-sm font-medium text-slate-700 mb-2 block">Members</label>
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Add member name"
+                  value={newGroupMemberName}
+                  onChange={(e) => setNewGroupMemberName(e.target.value)}
+                  className="h-11 rounded-xl"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      addMemberToNewGroup();
+                    }
+                  }}
+                />
+                <Button type="button" onClick={addMemberToNewGroup} className="rounded-xl bg-indigo-600 text-white">
+                  Add
+                </Button>
+              </div>
+              {newGroupMembers.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-3">
+                  {newGroupMembers.map((member) => (
+                    <button
+                      key={member}
+                      type="button"
+                      onClick={() => removeMemberFromNewGroup(member)}
+                      className="inline-flex items-center gap-2 rounded-full bg-violet-100 px-3 py-1.5 text-sm font-medium text-violet-700"
+                    >
+                      {member}
+                      <span className="text-violet-500">×</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <Button
+              type="button"
+              onClick={addGroup}
+              className="w-full h-11 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold"
+            >
+              Create group
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showReceiptDialog} onOpenChange={(open) => { if (!open) resetReceiptDialog(); else setShowReceiptDialog(true); }}>
+        <DialogContent className="rounded-[24px] sm:max-w-xl">
+          <DialogHeader>
+            <DialogTitle>Add Group Expense From Receipt</DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4 pt-2">
+            <div className="rounded-[20px] border border-violet-100 bg-gradient-to-r from-violet-50 via-white to-fuchsia-50 p-4">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold text-slate-900">Scan a receipt for this group</p>
+                  <p className="text-xs text-slate-500 mt-1">We’ll prefill the title and amount, then you can pick the payer and confirm splits.</p>
+                </div>
+                <label htmlFor="group-receipt-upload" className="cursor-pointer">
+                  <div className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-[#6d4cff] via-[#9345f9] to-[#f26ab3] text-white font-medium shadow-[0_14px_28px_rgba(147,69,249,0.22)]">
+                    {receiptScanning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                    {receiptScanning ? 'Scanning...' : 'Choose Receipt'}
+                  </div>
+                  <input
+                    id="group-receipt-upload"
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleGroupReceiptSelect}
+                    disabled={receiptScanning}
+                  />
+                </label>
+              </div>
+
+              {groupReceiptMeta && (
+                <div className="mt-4 rounded-2xl bg-white/80 border border-violet-100 p-3">
+                  <div className="flex items-center justify-between text-xs text-slate-600">
+                    <span className="font-medium">OCR confidence</span>
+                    <span>{Math.round((groupReceiptMeta.confidence || 0) * 100)}%</span>
+                  </div>
+                  {groupReceiptMeta.merchant && (
+                    <p className="mt-2 text-xs text-slate-600"><span className="font-medium text-slate-700">Merchant:</span> {groupReceiptMeta.merchant}</p>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium text-slate-700 mb-2 block">Title</label>
+                <Input
+                  value={groupReceiptData.title}
+                  onChange={(e) => setGroupReceiptData((prev) => ({ ...prev, title: e.target.value }))}
+                  placeholder="Dinner, cab, tickets..."
+                  className="h-11 rounded-xl"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-slate-700 mb-2 block">Amount</label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={groupReceiptData.amount}
+                  onChange={(e) => setGroupReceiptData((prev) => ({ ...prev, amount: e.target.value }))}
+                  placeholder="0.00"
+                  className="h-11 rounded-xl"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="text-sm font-medium text-slate-700 mb-2 block">Payer</label>
+              <Select value={groupReceiptData.paidBy} onValueChange={(val) => setGroupReceiptData((prev) => ({ ...prev, paidBy: val }))}>
+                <SelectTrigger className="w-full h-12 rounded-xl border border-violet-200 bg-gradient-to-r from-violet-50 via-white to-fuchsia-50 text-violet-900 font-semibold data-[placeholder]:text-violet-900 [&>svg]:text-violet-700">
+                  <SelectValue placeholder="Scroll and choose the payer" />
+                </SelectTrigger>
+                <SelectContent className="rounded-2xl border-0 bg-white shadow-[0_24px_60px_rgba(15,23,42,0.16)] max-h-72">
+                  {currentGroup?.people.map((person) => (
+                    <SelectItem key={person.id} value={person.id} className="rounded-xl">
+                      {person.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="rounded-[20px] border border-slate-200 p-4 space-y-3">
+              <label className="inline-flex items-center gap-2 text-sm font-medium text-slate-700">
+                <input
+                  type="checkbox"
+                  checked={groupReceiptData.useCustomSplits}
+                  onChange={(e) => setGroupReceiptData((prev) => ({ ...prev, useCustomSplits: e.target.checked }))}
+                />
+                Custom splits
+              </label>
+
+              {groupReceiptData.useCustomSplits ? (
+                <div className="space-y-2">
+                  {currentGroup?.people.map((person) => (
+                    <div key={person.id} className="flex items-center gap-3">
+                      <div className="w-28 text-sm text-slate-700">{person.name}</div>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        value={groupReceiptData.customSplits[person.id] || ''}
+                        onChange={(e) => setGroupReceiptData((prev) => ({
+                          ...prev,
+                          customSplits: { ...prev.customSplits, [person.id]: e.target.value },
+                        }))}
+                        placeholder="0.00"
+                        className="h-10 rounded-xl"
+                      />
+                    </div>
+                  ))}
+                  <p className="text-xs text-slate-500">Tip: custom shares should add up to the receipt total.</p>
+                </div>
+              ) : (
+                <p className="text-sm text-slate-500">If you leave this off, the amount will be split equally across all members.</p>
+              )}
+            </div>
+
+            <div className="flex gap-3 pt-1">
+              <Button
+                type="button"
+                onClick={confirmGroupReceiptExpense}
+                className="flex-1 h-11 rounded-xl bg-gradient-to-r from-[#6d4cff] via-[#9345f9] to-[#f26ab3] text-white font-semibold"
+              >
+                Confirm & Add
+              </Button>
+              <Button type="button" variant="outline" onClick={resetReceiptDialog} className="flex-1 h-11 rounded-xl">
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

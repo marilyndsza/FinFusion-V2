@@ -5,13 +5,18 @@ import { formatCurrency } from '@/utils/formatCurrency';
 import Navbar from '@/components/Navbar';
 import UserMenu from '@/components/UserMenu';
 import logo from '@/assets/logo.png';
+import { useTrendMode } from '@/context/TrendModeContext';
 
 export default function Forecasting() {
+  const { trendMode } = useTrendMode();
   const [forecast, setForecast] = useState(null);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState('daily'); // daily or weekly
 
   useEffect(() => { loadForecast(); }, []);
+  useEffect(() => {
+    setViewMode(trendMode === 'weekly' ? 'weekly' : 'daily');
+  }, [trendMode]);
 
   async function loadForecast() {
     setLoading(true);
@@ -90,28 +95,28 @@ export default function Forecasting() {
     <div className="min-h-screen bg-surface-container">
       {/* NAVBAR */}
       <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-xl border-b border-outline-variant/10">
-        <div className="container mx-auto px-6 py-3 flex items-center justify-between">
-          <img src={logo} alt="FinFusion logo" className="h-8 object-contain" />
+        <div className="container mx-auto px-6 sm:px-10 lg:px-14 py-4 flex items-center justify-between gap-5">
+          <img src={logo} alt="FinFusion logo" className="h-10 object-contain" />
           <Navbar />
           <UserMenu />
         </div>
       </header>
 
-      <main className="pt-12 pb-16 px-8 max-w-[1440px] mx-auto">
+      <main className="pt-8 sm:pt-12 pb-16 px-4 sm:px-6 lg:px-8 max-w-[1440px] mx-auto">
         {/* Hero Section */}
         <div className="mb-12">
-          <p className="text-[10px] font-bold text-secondary uppercase tracking-[0.2em] mb-2 font-body">
+          <p className="text-xs font-bold text-secondary uppercase tracking-[0.2em] mb-2 font-body">
             FINANCIAL HORIZON
           </p>
-          <h1 className="text-5xl lg:text-6xl font-headline font-extrabold text-on-surface mb-4" style={{ lineHeight: '1.1' }}>
+          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-headline font-extrabold text-on-surface mb-4 leading-[1.1]">
             Projected spending:{' '}
             <span className="bg-gradient-to-r from-[#630ed4] to-[#7c3aed] bg-clip-text text-transparent">
               {formatCurrency(totalPredicted)}
             </span>{' '}
-            <span className="text-on-surface/40 text-4xl">over {forecastPoints.length} days</span>
+            <span className="text-on-surface/40 text-2xl sm:text-3xl lg:text-4xl">over {forecastPoints.length} days</span>
           </h1>
 
-          <div className="flex items-center gap-6 mt-6">
+          <div className="flex flex-wrap items-center gap-3 sm:gap-6 mt-6">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-surface-container-low">
               {isIncreasing ? <TrendingUp className="w-4 h-4 text-[#ef4444]" />
                 : isDecreasing ? <TrendingDown className="w-4 h-4 text-[#10b981]" />
@@ -120,13 +125,13 @@ export default function Forecasting() {
                 {trendLabel}
               </span>
             </div>
-            <div className="text-sm text-on-surface/60 font-body">
+            <div className="text-base text-on-surface/70 font-body">
               Trend: <span className="font-semibold text-[#630ed4]">{trendPct >= 0 ? '+' : ''}{trendPct.toFixed(1)}%</span>
             </div>
-            <div className="text-sm text-on-surface/60 font-body">
+            <div className="text-base text-on-surface/70 font-body">
               Method: <span className="font-semibold">{methodLabel}</span>
             </div>
-            <div className="text-sm text-on-surface/60 font-body">
+            <div className="text-base text-on-surface/70 font-body">
               Confidence: <span className="font-bold text-[#630ed4]">{(confidence * 100).toFixed(0)}%</span>
             </div>
             {/* ML Model Indicator */}
@@ -143,15 +148,15 @@ export default function Forecasting() {
           </div>
         </div>
 
-        <div className="grid grid-cols-12 gap-8">
+        <div className="grid grid-cols-12 gap-6 lg:gap-8">
           {/* Main Chart Area */}
           <section className="col-span-12 lg:col-span-8 space-y-8">
             {/* Chart Card */}
-            <div className="bg-surface-container-lowest rounded-[1rem] p-8 relative overflow-hidden">
-              <div className="flex justify-between items-center mb-8">
+            <div className="bg-surface-container-lowest rounded-[1rem] p-5 sm:p-8 relative overflow-hidden">
+              <div className="flex flex-col sm:flex-row justify-between sm:items-center mb-8 gap-4">
                 <div>
-                  <h2 className="text-xl font-headline font-bold text-on-surface">Predicted Spending</h2>
-                  <p className="text-sm text-on-surface/50 font-body mt-1">30-day projection based on learned historical patterns</p>
+                  <h2 className="text-2xl font-headline font-bold text-on-surface">Predicted Spending</h2>
+                  <p className="text-base text-on-surface/60 font-body mt-1">30-day projection based on learned historical patterns</p>
                 </div>
                 <div className="flex gap-2">
                   <button 
@@ -248,28 +253,28 @@ export default function Forecasting() {
             </div>
 
             {/* Detailed Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div className="bg-surface-container-lowest p-6 rounded-[1rem] border border-outline-variant/10">
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+              <div className="bg-surface-container-lowest p-5 sm:p-6 rounded-[1rem] border border-outline-variant/10">
                 <p className="text-[10px] font-bold text-on-surface/50 uppercase tracking-wider mb-2 font-body">30-day Avg</p>
-                <p className="text-2xl font-headline font-bold text-on-surface tracking-tight">{formatCurrency(avgDaily30)}</p>
+                <p className="text-3xl font-headline font-bold text-on-surface tracking-tight">{formatCurrency(avgDaily30)}</p>
                 <div className={`mt-3 flex items-center gap-1 text-[10px] font-bold ${avgChangeUp ? 'text-[#ef4444]' : 'text-[#630ed4]'} font-body`}>
                   {avgChangeUp ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
                   {avgChangePct >= 0 ? '+' : ''}{avgChangePct.toFixed(1)}% vs 7D
                 </div>
               </div>
 
-              <div className="bg-surface-container-lowest p-6 rounded-[1rem] border border-outline-variant/10">
+              <div className="bg-surface-container-lowest p-5 sm:p-6 rounded-[1rem] border border-outline-variant/10">
                 <p className="text-[10px] font-bold text-on-surface/50 uppercase tracking-wider mb-2 font-body">7-day Avg</p>
-                <p className="text-2xl font-headline font-bold text-on-surface tracking-tight">{formatCurrency(avgDaily7)}</p>
+                <p className="text-3xl font-headline font-bold text-on-surface tracking-tight">{formatCurrency(avgDaily7)}</p>
                 <div className="mt-3 flex items-center gap-1 text-[10px] font-bold text-[#630ed4] font-body">
                   {slopePerDay >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
                   Slope {slopePerDay >= 0 ? '+' : ''}{slopePerDay.toFixed(0)}/day
                 </div>
               </div>
 
-              <div className="bg-surface-container-lowest p-6 rounded-[1rem] border border-outline-variant/10">
+              <div className="bg-surface-container-lowest p-5 sm:p-6 rounded-[1rem] border border-outline-variant/10">
                 <p className="text-[10px] font-bold text-on-surface/50 uppercase tracking-wider mb-2 font-body">Forecast Trend</p>
-                <p className="text-2xl font-headline font-bold text-on-surface tracking-tight">{trendLabel}</p>
+                <p className="text-3xl font-headline font-bold text-on-surface tracking-tight">{trendLabel}</p>
                 <div className="mt-3 flex items-center gap-1 text-[10px] font-bold text-[#630ed4] font-body">
                   <svg className="w-3 h-3" viewBox="0 0 16 16" fill="currentColor">
                     <circle cx="8" cy="8" r="6" />
@@ -279,9 +284,9 @@ export default function Forecasting() {
                 </div>
               </div>
 
-              <div className="bg-surface-container-lowest p-6 rounded-[1rem] border border-outline-variant/10">
+              <div className="bg-surface-container-lowest p-5 sm:p-6 rounded-[1rem] border border-outline-variant/10">
                 <p className="text-[10px] font-bold text-on-surface/50 uppercase tracking-wider mb-2 font-body">Peak Day</p>
-                <p className="text-2xl font-headline font-bold text-on-surface tracking-tight">{peakDateLabel}</p>
+                <p className="text-3xl font-headline font-bold text-on-surface tracking-tight">{peakDateLabel}</p>
                 <p className="mt-3 text-[10px] font-bold text-on-surface/50 uppercase font-body">{peakCycle}</p>
               </div>
             </div>

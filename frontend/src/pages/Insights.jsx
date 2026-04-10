@@ -10,12 +10,14 @@ import * as api from '@/lib/api';
 import Navbar from '@/components/Navbar';
 import UserMenu from '@/components/UserMenu';
 import logo from '@/assets/logo.png';
+import { useTrendMode } from '@/context/TrendModeContext';
+import { buildTrendSeries, buildCategoryTrendData } from '@/lib/trendUtils';
 
 const CHART_COLORS = ['#6366f1', '#ec4899', '#f59e0b', '#10b981', '#8b5cf6', '#ef4444', '#14b8a6', '#f97316'];
 
 export default function Insights() {
-  const [history, setHistory] = useState(null);
-  const [trends, setTrends] = useState(null);
+  const { trendMode } = useTrendMode();
+  const [expenses, setExpenses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [trendView, setTrendView] = useState('all');
 
@@ -24,12 +26,8 @@ export default function Insights() {
   async function loadData() {
     setLoading(true);
     try {
-      const [histRes, trendRes] = await Promise.all([
-        api.getHistory(),
-        api.getCategoryTrends(),
-      ]);
-      setHistory(histRes);
-      setTrends(trendRes);
+      const expRes = await api.getExpenses();
+      setExpenses(expRes || []);
     } catch (e) {
       console.error('Insights load error:', e);
     } finally { setLoading(false); }
@@ -43,36 +41,27 @@ export default function Insights() {
     );
   }
 
-  const monthlyTotals = history?.data?.monthly_totals || [];
-  const dateLabel = history?.metadata?.label || 'Historical trends';
-  const dateRange = history?.metadata?.date_range || '';
-
-  const periods = trends?.data?.periods || [];
-  const series = trends?.data?.series || {};
-  const topCategories = trends?.data?.top_categories || [];
+  const trendSeries = buildTrendSeries(expenses, trendMode);
+  const { topCategories, barData: builtBarData } = buildCategoryTrendData(expenses, trendMode);
+  const dateLabel = trendMode === 'weekly' ? 'Weekly spending trends' : 'Historical trends';
+  const dateRange = expenses.length > 0
+    ? `${expenses.reduce((min, exp) => min < exp.date ? min : exp.date, expenses[0].date)} to ${expenses.reduce((max, exp) => max > exp.date ? max : exp.date, expenses[0].date)}`
+    : '';
 
   // Build line chart data: [{period, total, count}]
-  const allTimeLineData = monthlyTotals.map(m => ({
+  const allTimeLineData = trendSeries.map(m => ({
     period: m.period,
-    label: m.period.length >= 7 ? m.period.slice(0, 7) : m.period,
+    label: m.label,
     total: m.total,
     count: m.count,
   }));
-  const recentLineData = allTimeLineData.slice(-12);
+  const recentLineData = allTimeLineData.slice(-(trendMode === 'weekly' ? 8 : 12));
   const lineData = trendView === 'recent' ? recentLineData : allTimeLineData;
-
-  // Build stacked bar data: [{period, Food: x, Rent: y, ...}]
   const topCatNames = topCategories.slice(0, 6).map(c => c.category);
-  const barData = periods.map((p, i) => {
-    const row = { period: p.length >= 7 ? p.slice(0, 7) : p };
-    topCatNames.forEach(cat => {
-      row[cat] = series[cat]?.[i] || 0;
-    });
-    return row;
-  });
+  const barData = builtBarData;
 
   // Month-over-month comparison (last 12 months)
-  const recentMonths = monthlyTotals.slice(-13);
+  const recentMonths = allTimeLineData.slice(-(trendMode === 'weekly' ? 9 : 13));
   const momData = recentMonths.slice(1).map((m, i) => {
     const prev = recentMonths[i];
     const delta = m.total - prev.total;
@@ -90,27 +79,27 @@ export default function Insights() {
     <div className="min-h-screen bg-[#f5f7fb]">
       {/* NAVBAR */}
       <header className="sticky top-0 z-30 bg-white/80 backdrop-blur border-b border-slate-200">
-        <div className="container mx-auto px-6 py-3 flex items-center justify-between">
-          <img src={logo} alt="FinFusion logo" className="h-8 object-contain" />
+        <div className="container mx-auto px-6 sm:px-10 lg:px-14 py-4 flex items-center justify-between gap-5">
+          <img src={logo} alt="FinFusion logo" className="h-10 object-contain" />
           <Navbar />
           <UserMenu />
         </div>
       </header>
 
-      <main className="container mx-auto px-6 py-10 max-w-6xl">
+      <main className="container mx-auto px-4 sm:px-6 py-8 sm:py-10 max-w-6xl">
         {/* HEADER */}
         <div className="mb-10">
-          <h1 className="text-3xl md:text-4xl font-bold text-slate-900" data-testid="insights-title">Insights</h1>
-          <p className="text-slate-500 mt-2" data-testid="insights-subtitle">{dateLabel}</p>
-          {dateRange && <p className="text-xs text-slate-400 mt-1">{dateRange}</p>}
+          <h1 className="text-4xl md:text-5xl font-bold text-slate-900 leading-tight" data-testid="insights-title">Insights</h1>
+          <p className="text-lg text-slate-600 mt-2" data-testid="insights-subtitle">{dateLabel}</p>
+          {dateRange && <p className="text-sm text-slate-500 mt-1">{dateRange}</p>}
         </div>
 
         {/* MONTHLY SPENDING TREND (Line Chart) */}
-        <Card className="rounded-[24px] border-0 bg-white p-6 mb-8 shadow-sm" data-testid="monthly-trend-card">
+        <Card className="rounded-[24px] border-0 bg-white p-5 sm:p-6 mb-8 shadow-sm" data-testid="monthly-trend-card">
           <div className="flex items-center justify-between mb-6 gap-4">
             <div className="flex items-center gap-2">
               <TrendingUp className="w-5 h-5 text-indigo-600" />
-              <h2 className="text-lg font-bold text-slate-900">Monthly Spending Trend</h2>
+              <h2 className="text-xl font-bold text-slate-900">{trendMode === 'weekly' ? 'Weekly Spending Trend' : 'Monthly Spending Trend'}</h2>
             </div>
             <div className="inline-flex rounded-full bg-slate-100 p-1">
               <button
@@ -119,7 +108,7 @@ export default function Insights() {
                   trendView === 'recent' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500'
                 }`}
               >
-                Recent 12M
+                {trendMode === 'weekly' ? 'Recent 8W' : 'Recent 12M'}
               </button>
               <button
                 onClick={() => setTrendView('all')}
@@ -139,11 +128,7 @@ export default function Insights() {
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={lineData}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                    <XAxis
-                      dataKey="label"
-                      tick={{ fontSize: 10, fill: '#94a3b8' }}
-                      interval={0}
-                    />
+                  <XAxis dataKey="label" tick={{ fontSize: 10, fill: '#94a3b8' }} interval={0} />
                     <YAxis tick={{ fontSize: 10, fill: '#94a3b8' }} tickFormatter={v => `${(v / 1000).toFixed(0)}k`} />
                     <Tooltip
                       contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }}
@@ -161,10 +146,10 @@ export default function Insights() {
 
         {/* CATEGORY TRENDS (Stacked Bar) + TOP CATEGORIES */}
         <div className="grid grid-cols-1 lg:grid-cols-[2fr,1fr] gap-8 mb-8">
-          <Card className="rounded-[24px] border-0 bg-white p-6 shadow-sm" data-testid="category-trends-card">
+          <Card className="rounded-[24px] border-0 bg-white p-5 sm:p-6 shadow-sm" data-testid="category-trends-card">
             <div className="flex items-center gap-2 mb-6">
               <BarChart3 className="w-5 h-5 text-indigo-600" />
-              <h2 className="text-lg font-bold text-slate-900">Category Trends Over Time</h2>
+              <h2 className="text-xl font-bold text-slate-900">{trendMode === 'weekly' ? 'Weekly Category Trends' : 'Category Trends Over Time'}</h2>
             </div>
             {barData.length > 0 ? (
               <ResponsiveContainer width="100%" height={300}>
@@ -192,10 +177,10 @@ export default function Insights() {
           </Card>
 
           {/* TOP CATEGORIES */}
-          <Card className="rounded-[24px] border-0 bg-white p-6 shadow-sm" data-testid="top-categories-card">
+          <Card className="rounded-[24px] border-0 bg-white p-5 sm:p-6 shadow-sm" data-testid="top-categories-card">
             <div className="flex items-center gap-2 mb-6">
               <Award className="w-5 h-5 text-indigo-600" />
-              <h2 className="text-lg font-bold text-slate-900">Top Categories</h2>
+              <h2 className="text-xl font-bold text-slate-900">Top Categories</h2>
             </div>
             <p className="text-xs text-slate-400 mb-4">All-time spending</p>
             <div className="space-y-4">
@@ -222,9 +207,9 @@ export default function Insights() {
         </div>
 
         {/* MONTH-OVER-MONTH COMPARISON */}
-        <Card className="rounded-[24px] border-0 bg-white p-6 shadow-sm" data-testid="mom-comparison-card">
-          <h2 className="text-lg font-bold text-slate-900 mb-6">Month-over-Month Comparison</h2>
-          <p className="text-xs text-slate-400 mb-4">Last 12 months</p>
+        <Card className="rounded-[24px] border-0 bg-white p-5 sm:p-6 shadow-sm" data-testid="mom-comparison-card">
+          <h2 className="text-xl font-bold text-slate-900 mb-6">{trendMode === 'weekly' ? 'Week-over-Week Comparison' : 'Month-over-Month Comparison'}</h2>
+          <p className="text-sm text-slate-500 mb-4">{trendMode === 'weekly' ? 'Last 8 weeks' : 'Last 12 months'}</p>
           <div className="overflow-x-auto">
             <table className="w-full text-sm" data-testid="mom-table">
               <thead>
@@ -254,7 +239,7 @@ export default function Insights() {
             </table>
           </div>
           {momData.length === 0 && (
-            <p className="text-sm text-slate-400 text-center py-6">Not enough data for month-over-month comparison</p>
+            <p className="text-sm text-slate-400 text-center py-6">Not enough data for comparison</p>
           )}
         </Card>
       </main>

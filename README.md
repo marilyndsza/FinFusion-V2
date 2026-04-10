@@ -124,7 +124,11 @@ The project is configured for public deployment using:
 
 The backend Docker configuration includes OCR system dependencies so receipt scanning can work in production. The application also supports hosted database configuration through environment variables when moving beyond local SQLite storage.
 
+<<<<<<< HEAD
 ## Purpose 📌
+=======
+## Purpose
+>>>>>>> 2aeafed (Polish UI and group expense receipt flow)
 
 FinFusion was built as an academic full-stack intelligent finance project that demonstrates how traditional expense tracking can be extended with:
 
@@ -134,5 +138,8 @@ FinFusion was built as an academic full-stack intelligent finance project that d
 - explainable ai driven financial insights
 
 Rather than positioning itself as a production-grade financial advisory system, the project is intended as a practical demonstration of intelligent personal finance tooling with a strong focus on usability, interpretability, and end-to-end system design.
+<<<<<<< HEAD
 
 Thank you for stopping by 💕
+=======
+>>>>>>> 2aeafed (Polish UI and group expense receipt flow)

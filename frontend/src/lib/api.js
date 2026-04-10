@@ -149,6 +149,13 @@ export async function getBudgets(month, year) {
   }
 }
 
+export async function postCustomBudgetCategory(payload) {
+  const r = await axios.post(`${API}/budget/custom`, payload, {
+    headers: { 'Content-Type': 'application/json' },
+  });
+  return r.data;
+}
+
 // ==================== Anomalies ====================
 
 export async function getAnomalies() {
