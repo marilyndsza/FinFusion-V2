@@ -16,7 +16,7 @@ The system is designed around three ideas:
 
 ## Key Features 🚀
 
-### Login
+### Login 🔐
 - Secure user authentication system
 - Demo account access for quick testing
 - Separate environments for preloaded and manual data usage
@@ -24,8 +24,7 @@ The system is designed around three ideas:
   <img src="Screenshots/Login page.png" width="800"/>
 </p>
 
-### Expense Management 
-
+### Expense Management 💸
 - Add, edit, and delete personal expenses
 - Separate demo and user-entered data modes
 - Categorized transaction history across food, rent, utilities, travel, healthcare, and more
@@ -34,7 +33,7 @@ The system is designed around three ideas:
   <img src="Screenshots/expense management.jpeg" width="47%"/>
 </p>
 
-### Dashboard Analytics
+### Dashboard Analytics 📊
 - Monthly spending summaries
 - Category breakdowns and budget tracking
 - Recent expense activity
@@ -43,7 +42,7 @@ The system is designed around three ideas:
   <img src="Screenshots/Dashboard page.png" width="800"/>
 </p>
 
-### Forecasting
+### Forecasting 📈
 - LSTM-based time-series forecasting for future spending projection
 - Recursive multi-day prediction pipeline
 - Forecast trend detection, peak day estimation, and confidence scoring
@@ -52,7 +51,7 @@ The system is designed around three ideas:
   <img src="Screenshots/Forecast page.png" width="800"/>
 </p>
 
-### Receipt Scanning with OCR
+### Receipt Scanning with OCR 🔍
 - Upload receipt images directly from the dashboard
 - OCR extraction of total amount, category, and spending description
 - Editable verification step before final submission
@@ -61,7 +60,7 @@ The system is designed around three ideas:
   <img src="Screenshots/OCR Receipt scanner.png" width="800"/>
 </p>
 
-### Historical Insights
+### Historical Insights 📆
 - Monthly trend visualization
 - Category trend comparison over time
 - Top-spending category ranking
@@ -70,7 +69,7 @@ The system is designed around three ideas:
   <img src="Screenshots/Insights page.png" width="800"/>
 </p>
 
-## Machine Learning and Intelligence Layer
+🧠## Machine Learning and Intelligence Layer
 
 FinFusion includes an LSTM-based forecasting pipeline that uses historical spending sequences to simulate likely future spending behavior. The model is designed to learn temporal patterns from transaction history, such as recurring spikes, day-based rhythm, and broader spending drift.
 
@@ -84,7 +83,7 @@ The forecasting pipeline includes:
 
 The application also includes a rule-based insight layer that transforms computed metrics into readable observations, such as trend direction, category pressure, and liquidity alerts.
 
-## OCR Pipeline
+🔍## OCR Pipeline
 
 The receipt scanning flow uses OCR to extract text from uploaded receipts and then parse the content to identify:
 
@@ -95,9 +94,9 @@ The receipt scanning flow uses OCR to extract text from uploaded receipts and th
 
 This information is passed back to the frontend, where the user can verify and edit the extracted fields before saving the expense. This keeps the workflow practical and user-safe, especially when OCR is imperfect.
 
-## Tech Stack
+🛠️## Tech Stack
 
-### Frontend
+🎨### Frontend
 
 - React
 - CRACO
@@ -105,20 +104,20 @@ This information is passed back to the frontend, where the user can verify and e
 - Recharts
 - Radix UI components
 
-### Backend
+⚙️### Backend
 
 - FastAPI
 - SQLAlchemy
 - SQLite
 - Pandas and NumPy for analytics processing
 
-### Machine Learning / Data
+🤖### Machine Learning / Data
 
 - TensorFlow / Keras for LSTM forecasting
 - scikit-learn for preprocessing and supporting utilities
 - pytesseract for OCR-based receipt parsing
 
-## Application Architecture
+🏗️## Application Architecture
 
 FinFusion follows a split frontend-backend architecture:
 
@@ -127,7 +126,7 @@ FinFusion follows a split frontend-backend architecture:
 
 The platform is organized so that business logic lives on the backend and the frontend consumes structured API responses for rendering. This keeps analytics and predictive behavior centralized and easier to extend.
 
-## Demo Accounts
+👤## Demo Accounts
 
 Two demo modes are included for presentation and evaluation:
 
@@ -137,7 +136,7 @@ Two demo modes are included for presentation and evaluation:
 - `demo2@example.com` / `demo123`
   Empty account intended for live manual entry demos
 
-## Deployment
+🌐## Deployment
 
 The project is configured for public deployment using:
 
