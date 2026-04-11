@@ -29,7 +29,7 @@ The system is designed around three ideas:
 - Categorized transaction history across food, rent, utilities, travel, healthcare, and more
 <p align="center">
   <img src="Screenshots/category.jpeg" width="45%"/>
-  <img src="Screenshots/expense management.jpeg" width="45%"/>
+  <img src="Screenshots/expense management.jpeg" width="50%"/>
 </p>
 
 ### Dashboard Analytics
