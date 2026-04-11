@@ -1,4 +1,4 @@
-# FinFusion 🔮
+# FinFusion ✨
 
 FinFusion is a full-stack personal finance intelligence platform built to help users track expenses, understand spending behavior, and explore predictive insights through an interactive dashboard. The project combines modern frontend design with backend analytics, machine learning-based forecasting, and OCR-assisted expense entry to create a more intelligent expense management experience.
 
