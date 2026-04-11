@@ -28,8 +28,8 @@ The system is designed around three ideas:
 - Separate demo and user-entered data modes
 - Categorized transaction history across food, rent, utilities, travel, healthcare, and more
 <p align="center">
-  <img src="Screenshots/category.jpeg" width="50%"/>
-  <img src="Screenshots/expense management.jpeg" width="50%"/>
+  <img src="Screenshots/category.jpeg" width="45%"/>
+  <img src="Screenshots/expense management.jpeg" width="48%"/>
 </p>
 
 ### Dashboard Analytics
