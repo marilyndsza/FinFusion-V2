@@ -1,10 +1,10 @@
-# FinFusion ✨
+# FinFusion - Track smarter. Spend wiser ✨🤖
 
 FinFusion is a full-stack personal finance intelligence platform built to help users track expenses, understand spending behavior, and explore predictive insights through an interactive dashboard. The project combines modern frontend design with backend analytics, machine learning-based forecasting, and OCR-assisted expense entry to create a more intelligent expense management experience.
 
 Click here to read our review paper: https://papers.ssrn.com/sol3/papers.cfm?abstract_id=6336338
 
-## Project Overview
+## Project Overview 🎯
 
 The core goal of FinFusion is to move beyond simple expense logging and into explainable financial analysis. Instead of showing only raw transaction lists, the application turns user data into dashboards, category analytics, forecast simulations, and insight panels that help users understand how and where they spend.
 
@@ -24,7 +24,7 @@ The system is designed around three ideas:
   <img src="Screenshots/Login page.png" width="800"/>
 </p>
 
-### Expense Management
+### Expense Management 
 
 - Add, edit, and delete personal expenses
 - Separate demo and user-entered data modes
