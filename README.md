@@ -15,13 +15,12 @@ The system is designed around three ideas:
 ## Key Features
 
 ### Login
-
-<p align="center">
-  <img src="Screenshots/Login page.png" width="600"/>
-</p>
 - Secure user authentication system
 - Demo account access for quick testing
 - Separate environments for preloaded and manual data usage
+<p align="center">
+  <img src="Screenshots/Login page.png" width="600"/>
+</p>
 
 ### Expense Management
 
@@ -31,40 +30,40 @@ The system is designed around three ideas:
   https://github.com/marilyndsza/FinFusion-V2/blob/main/Screenshots/Dashboard%20page.png?raw=true
 
 ### Dashboard Analytics
-<p align="center">
-  <img src="Screenshots/Dashboard page.png" width="600"/>
-</p>
 - Monthly spending summaries
 - Category breakdowns and budget tracking
 - Recent expense activity
 - Data-driven insight cards generated from historical behavior
+<p align="center">
+  <img src="Screenshots/Dashboard page.png" width="600"/>
+</p>
 
 ### Forecasting
-<p align="center">
-  <img src="Screenshots/Forecast page.png" width="600"/>
-</p>
 - LSTM-based time-series forecasting for future spending projection
 - Recursive multi-day prediction pipeline
 - Forecast trend detection, peak day estimation, and confidence scoring
 - Explainable forecast UI with projected totals, category pressure, and context panels
+<p align="center">
+  <img src="Screenshots/Forecast page.png" width="600"/>
+</p>
 
 ### Receipt Scanning with OCR
-<p align="center">
-  <img src="Screenshots/OCR Receipt scanner.png" width="600"/>
-</p>
 - Upload receipt images directly from the dashboard
 - OCR extraction of total amount, category, and spending description
 - Editable verification step before final submission
 - Manual fallback when OCR confidence is low or extraction fails
+<p align="center">
+  <img src="Screenshots/OCR Receipt scanner.png" width="600"/>
+</p>
 
 ### Historical Insights
-<p align="center">
-  <img src="Screenshots/Insights page.png" width="600"/>
-</p>
 - Monthly trend visualization
 - Category trend comparison over time
 - Top-spending category ranking
 - Month-over-month analysis for spending changes
+<p align="center">
+  <img src="Screenshots/Insights page.png" width="600"/>
+</p>
 
 ## Machine Learning and Intelligence Layer
 
