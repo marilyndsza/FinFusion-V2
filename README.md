@@ -14,7 +14,7 @@ The system is designed around three ideas:
 - intelligent analytics generated from transaction history
 - decision-support UI powered by forecasting and receipt OCR
 
-## Key Features
+## Key Features 🚀
 
 ### Login
 - Secure user authentication system
