@@ -126,7 +126,7 @@ FinFusion follows a split frontend-backend architecture:
 
 The platform is organized so that business logic lives on the backend and the frontend consumes structured API responses for rendering. This keeps analytics and predictive behavior centralized and easier to extend.
 
-👤## Demo Accounts
+## 👤Demo Accounts
 
 Two demo modes are included for presentation and evaluation:
 
