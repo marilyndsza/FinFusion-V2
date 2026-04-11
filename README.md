@@ -27,7 +27,10 @@ The system is designed around three ideas:
 - Add, edit, and delete personal expenses
 - Separate demo and user-entered data modes
 - Categorized transaction history across food, rent, utilities, travel, healthcare, and more
-  https://github.com/marilyndsza/FinFusion-V2/blob/main/Screenshots/Dashboard%20page.png?raw=true
+<p align="center">
+  <img src="Screenshots/category.jpeg" width="45%"/>
+  <img src="Screenshots/expense management.png" width="45%"/>
+</p>
 
 ### Dashboard Analytics
 - Monthly spending summaries
