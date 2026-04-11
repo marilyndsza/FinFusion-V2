@@ -19,12 +19,9 @@ The system is designed around three ideas:
 <p align="center">
   <img src="Screenshots/Login page.png" width="800"/>
 </p>
-
 - Secure user authentication system
 - Demo account access for quick testing
 - Separate environments for preloaded and manual data usage
-
-
 
 ### Expense Management
 
@@ -34,28 +31,36 @@ The system is designed around three ideas:
   https://github.com/marilyndsza/FinFusion-V2/blob/main/Screenshots/Dashboard%20page.png?raw=true
 
 ### Dashboard Analytics
-
+<p align="center">
+  <img src="images/Dashboard page.png" width="800"/>
+</p>
 - Monthly spending summaries
 - Category breakdowns and budget tracking
 - Recent expense activity
 - Data-driven insight cards generated from historical behavior
 
 ### Forecasting
-
+<p align="center">
+  <img src="images/Forecast page.png" width="800"/>
+</p>
 - LSTM-based time-series forecasting for future spending projection
 - Recursive multi-day prediction pipeline
 - Forecast trend detection, peak day estimation, and confidence scoring
 - Explainable forecast UI with projected totals, category pressure, and context panels
 
 ### Receipt Scanning with OCR
-
+<p align="center">
+  <img src="images/OCR Receipt scanner.png" width="800"/>
+</p>
 - Upload receipt images directly from the dashboard
 - OCR extraction of total amount, category, and spending description
 - Editable verification step before final submission
 - Manual fallback when OCR confidence is low or extraction fails
 
 ### Historical Insights
-
+<p align="center">
+  <img src="images/Insights page.png" width="800"/>
+</p>
 - Monthly trend visualization
 - Category trend comparison over time
 - Top-spending category ranking
