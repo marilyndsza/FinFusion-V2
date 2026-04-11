@@ -19,7 +19,7 @@ The system is designed around three ideas:
 - Demo account access for quick testing
 - Separate environments for preloaded and manual data usage
 <p align="center">
-  <img src="Screenshots/Login page.png" width="600"/>
+  <img src="Screenshots/Login page.png" width="800"/>
 </p>
 
 ### Expense Management
@@ -35,7 +35,7 @@ The system is designed around three ideas:
 - Recent expense activity
 - Data-driven insight cards generated from historical behavior
 <p align="center">
-  <img src="Screenshots/Dashboard page.png" width="600"/>
+  <img src="Screenshots/Dashboard page.png" width="800"/>
 </p>
 
 ### Forecasting
@@ -44,7 +44,7 @@ The system is designed around three ideas:
 - Forecast trend detection, peak day estimation, and confidence scoring
 - Explainable forecast UI with projected totals, category pressure, and context panels
 <p align="center">
-  <img src="Screenshots/Forecast page.png" width="600"/>
+  <img src="Screenshots/Forecast page.png" width="800"/>
 </p>
 
 ### Receipt Scanning with OCR
@@ -53,7 +53,7 @@ The system is designed around three ideas:
 - Editable verification step before final submission
 - Manual fallback when OCR confidence is low or extraction fails
 <p align="center">
-  <img src="Screenshots/OCR Receipt scanner.png" width="600"/>
+  <img src="Screenshots/OCR Receipt scanner.png" width="800"/>
 </p>
 
 ### Historical Insights
@@ -62,7 +62,7 @@ The system is designed around three ideas:
 - Top-spending category ranking
 - Month-over-month analysis for spending changes
 <p align="center">
-  <img src="Screenshots/Insights page.png" width="600"/>
+  <img src="Screenshots/Insights page.png" width="800"/>
 </p>
 
 ## Machine Learning and Intelligence Layer
