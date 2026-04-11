@@ -69,7 +69,7 @@ The system is designed around three ideas:
   <img src="Screenshots/Insights page.png" width="800"/>
 </p>
 
-🧠## Machine Learning and Intelligence Layer
+## 🧠Machine Learning and Intelligence Layer
 
 FinFusion includes an LSTM-based forecasting pipeline that uses historical spending sequences to simulate likely future spending behavior. The model is designed to learn temporal patterns from transaction history, such as recurring spikes, day-based rhythm, and broader spending drift.
 
@@ -83,7 +83,7 @@ The forecasting pipeline includes:
 
 The application also includes a rule-based insight layer that transforms computed metrics into readable observations, such as trend direction, category pressure, and liquidity alerts.
 
-🔍## OCR Pipeline
+## 🔍OCR Pipeline
 
 The receipt scanning flow uses OCR to extract text from uploaded receipts and then parse the content to identify:
 
@@ -94,9 +94,9 @@ The receipt scanning flow uses OCR to extract text from uploaded receipts and th
 
 This information is passed back to the frontend, where the user can verify and edit the extracted fields before saving the expense. This keeps the workflow practical and user-safe, especially when OCR is imperfect.
 
-🛠️## Tech Stack
+## 🛠️Tech Stack
 
-🎨### Frontend
+### 🎨Frontend
 
 - React
 - CRACO
@@ -104,20 +104,20 @@ This information is passed back to the frontend, where the user can verify and e
 - Recharts
 - Radix UI components
 
-⚙️### Backend
+### ⚙️Backend
 
 - FastAPI
 - SQLAlchemy
 - SQLite
 - Pandas and NumPy for analytics processing
 
-🤖### Machine Learning / Data
+### 🤖Machine Learning / Data
 
 - TensorFlow / Keras for LSTM forecasting
 - scikit-learn for preprocessing and supporting utilities
 - pytesseract for OCR-based receipt parsing
 
-🏗️## Application Architecture
+## 🏗️Application Architecture
 
 FinFusion follows a split frontend-backend architecture:
 
@@ -136,7 +136,7 @@ Two demo modes are included for presentation and evaluation:
 - `demo2@example.com` / `demo123`
   Empty account intended for live manual entry demos
 
-🌐## Deployment
+## 🌐Deployment
 
 The project is configured for public deployment using:
 
@@ -145,7 +145,7 @@ The project is configured for public deployment using:
 
 The backend Docker configuration includes OCR system dependencies so receipt scanning can work in production. The application also supports hosted database configuration through environment variables when moving beyond local SQLite storage.
 
-## Purpose 📌
+## 📌Purpose 
 
 FinFusion was built as an academic full-stack intelligent finance project that demonstrates how traditional expense tracking can be extended with:
 
