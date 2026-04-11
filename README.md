@@ -14,11 +14,24 @@ The system is designed around three ideas:
 
 ## Key Features
 
+### Login
+
+<p align="center">
+  <img src="Screenshots/Login page.png" width="800"/>
+</p>
+
+- Secure user authentication system
+- Demo account access for quick testing
+- Separate environments for preloaded and manual data usage
+
+
+
 ### Expense Management
 
 - Add, edit, and delete personal expenses
 - Separate demo and user-entered data modes
 - Categorized transaction history across food, rent, utilities, travel, healthcare, and more
+  https://github.com/marilyndsza/FinFusion-V2/blob/main/Screenshots/Dashboard%20page.png?raw=true
 
 ### Dashboard Analytics
 
