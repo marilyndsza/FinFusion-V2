@@ -32,7 +32,7 @@ The system is designed around three ideas:
 
 ### Dashboard Analytics
 <p align="center">
-  <img src="images/Dashboard page.png" width="800"/>
+  <img src="Screenshots/Dashboard page.png" width="400"/>
 </p>
 - Monthly spending summaries
 - Category breakdowns and budget tracking
@@ -41,7 +41,7 @@ The system is designed around three ideas:
 
 ### Forecasting
 <p align="center">
-  <img src="images/Forecast page.png" width="800"/>
+  <img src="Screenshots/Forecast page.png" width="400"/>
 </p>
 - LSTM-based time-series forecasting for future spending projection
 - Recursive multi-day prediction pipeline
@@ -50,7 +50,7 @@ The system is designed around three ideas:
 
 ### Receipt Scanning with OCR
 <p align="center">
-  <img src="images/OCR Receipt scanner.png" width="800"/>
+  <img src="Screenshots/OCR Receipt scanner.png" width="400"/>
 </p>
 - Upload receipt images directly from the dashboard
 - OCR extraction of total amount, category, and spending description
@@ -59,7 +59,7 @@ The system is designed around three ideas:
 
 ### Historical Insights
 <p align="center">
-  <img src="images/Insights page.png" width="800"/>
+  <img src="Screenshots/Insights page.png" width="400"/>
 </p>
 - Monthly trend visualization
 - Category trend comparison over time
