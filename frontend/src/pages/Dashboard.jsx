@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { Button } from '@/components/ui/button';
@@ -18,7 +18,7 @@ import {
 } from 'recharts';
 import {
   Lightbulb, Plus, Upload, Users, Target, Receipt,
-  TrendingUp, TrendingDown, Minus, Scan
+  TrendingUp, TrendingDown, Minus, Scan, Mic, MicOff
 } from 'lucide-react';
 import { formatCurrency } from '@/utils/formatCurrency';
 import * as api from '@/lib/api';
@@ -28,12 +28,21 @@ import ReceiptScanModal from '@/components/ReceiptScanModal';
 import logo from '@/assets/logo.png';
 import { useTrendMode } from '@/context/TrendModeContext';
 import { getTrendSnapshot, getWeeksInMonth } from '@/lib/trendUtils';
+import { parseVoiceExpense } from '@/utils/parseVoiceExpense';
 
 const COLORS = ["#FF0066", "#FF6C0C", "#934790", "#8CA9FF", "#3B82F6", "#10B981", "#F59E0B", "#EC4899", "#14B8A6"];
 
-const categories = [
+const BASE_CATEGORIES = [
   'Food', 'Transport', 'Shopping', 'Entertainment',
-  'Utilities', 'Healthcare', 'Rent', 'Education', 'Travel', 'Other'
+  'Utilities', 'Healthcare', 'Rent', 'Education', 'Travel', 'Fitness', 'Pets', 'Other', 'Miscellaneous'
+];
+
+const voiceExamples = [
+  'Spent ₹200 on shopping',
+  'Paid ₹1500 for Groceries',
+  'Gas station for ₹2500',
+  'Dinner at restaurant for ₹800',
+  'Add ₹100 to my Travel budget',
 ];
 
 export default function Dashboard() {
@@ -46,12 +55,129 @@ export default function Dashboard() {
   const [showAddExpense, setShowAddExpense] = useState(false);
   const [showReceiptScan, setShowReceiptScan] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [speechSupported, setSpeechSupported] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+  const [showVoiceExamples, setShowVoiceExamples] = useState(false);
+  const [voiceDraft, setVoiceDraft] = useState(null);
+  const recognitionRef = useRef(null);
+  const categoryOptionsRef = useRef(BASE_CATEGORIES);
+  const voiceCommandRef = useRef(null);
   const [newExpense, setNewExpense] = useState({
     amount: '', category: 'Food', description: '',
     date: new Date().toISOString().split('T')[0]
   });
 
+  const categoryOptions = useMemo(() => {
+    const discoveredCategories = [
+      ...expenses.map(expense => expense.category),
+      ...budgets.map(budget => budget.category),
+      ...(analytics?.data?.by_category || []).map(item => item.category),
+      voiceDraft?.category,
+    ].filter(Boolean);
+
+    const seen = new Set();
+    return [...BASE_CATEGORIES, ...discoveredCategories]
+      .map(category => String(category).trim())
+      .filter(category => {
+        const key = category.toLowerCase();
+        if (!category || seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+  }, [expenses, budgets, analytics, voiceDraft?.category]);
+
   useEffect(() => { loadData(); }, []);
+
+  useEffect(() => {
+    categoryOptionsRef.current = categoryOptions;
+  }, [categoryOptions]);
+
+  useEffect(() => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    if (!SpeechRecognition) {
+      setSpeechSupported(false);
+      return undefined;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.lang = 'en-US';
+
+    recognition.onstart = () => setIsListening(true);
+    recognition.onend = () => {
+      setIsListening(false);
+      setShowVoiceExamples(false);
+    };
+    recognition.onerror = (event) => {
+      setIsListening(false);
+      setShowVoiceExamples(false);
+
+      toast.error("Oops, couldn't quite catch that. Try speaking closer or check mic permissions.");
+    };
+    recognition.onresult = (event) => {
+      const transcript = Array.from(event.results)
+        .map(result => result[0]?.transcript || '')
+        .join(' ')
+        .trim();
+
+      if (!transcript) {
+        toast.error("Oops, couldn't quite catch that. Try speaking closer or check mic permissions.");
+        return;
+      }
+
+      const parsedExpense = parseVoiceExpense(transcript, categoryOptionsRef.current);
+
+      if (!parsedExpense.amount) {
+        toast.error("Oops, couldn't quite catch that. Try speaking closer or check mic permissions.");
+        return;
+      }
+
+      setVoiceDraft({
+        amount: parsedExpense.amount,
+        category: parsedExpense.category,
+        description: parsedExpense.description || parsedExpense.transcript,
+        date: new Date().toISOString().split('T')[0],
+      });
+    };
+
+    recognitionRef.current = recognition;
+    setSpeechSupported(true);
+
+    return () => {
+      recognition.onstart = null;
+      recognition.onend = null;
+      recognition.onerror = null;
+      recognition.onresult = null;
+      recognition.stop();
+      recognitionRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!showAddExpense && recognitionRef.current) {
+      recognitionRef.current.stop();
+      setIsListening(false);
+    }
+  }, [showAddExpense]);
+
+  useEffect(() => {
+    if (!showVoiceExamples && !voiceDraft) return undefined;
+
+    function handleVoiceClickAway(event) {
+      if (voiceCommandRef.current?.contains(event.target)) return;
+      resetVoiceDraft();
+    }
+
+    document.addEventListener('mousedown', handleVoiceClickAway);
+    document.addEventListener('touchstart', handleVoiceClickAway);
+
+    return () => {
+      document.removeEventListener('mousedown', handleVoiceClickAway);
+      document.removeEventListener('touchstart', handleVoiceClickAway);
+    };
+  }, [showVoiceExamples, voiceDraft]);
 
   async function loadData() {
     console.log('[LOAD DATA] Fetching expenses...');
@@ -135,6 +261,57 @@ export default function Dashboard() {
 
   function handleReceiptScan() {
     setShowReceiptScan(true);
+  }
+
+  function toggleSpeechRecognition() {
+    if (!speechSupported || !recognitionRef.current) {
+      toast.error("Oops, couldn't quite catch that. Try speaking closer or check mic permissions.");
+      return;
+    }
+
+    if (isListening) {
+      recognitionRef.current.stop();
+      return;
+    }
+
+    setVoiceDraft(null);
+    setShowVoiceExamples(true);
+    recognitionRef.current.start();
+  }
+
+  function resetVoiceDraft() {
+    setVoiceDraft(null);
+    setShowVoiceExamples(false);
+    if (recognitionRef.current) {
+      recognitionRef.current.stop();
+    }
+    setIsListening(false);
+  }
+
+  async function handleVoiceExpenseSave() {
+    if (!voiceDraft?.amount) {
+      toast.error('Amount is required before saving.');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await api.postExpense({
+        amount: parseFloat(voiceDraft.amount),
+        category: voiceDraft.category || 'Miscellaneous',
+        description: voiceDraft.description,
+        date: voiceDraft.date,
+      });
+
+      toast.success('Voice expense added');
+      resetVoiceDraft();
+      await loadData();
+    } catch (err) {
+      console.error('[VOICE EXPENSE] Error:', err);
+      toast.error('Failed to save voice expense');
+    } finally {
+      setLoading(false);
+    }
   }
 
   // Derived values — all from backend
@@ -343,10 +520,105 @@ export default function Dashboard() {
                 )}
               </div>
               <div className="mt-3 flex justify-end">
-                <Button className="rounded-full h-12 sm:h-13 px-5 sm:px-6 text-sm sm:text-base font-semibold flex items-center gap-2 border-0 text-white shadow-[0_16px_35px_rgba(99,102,241,0.28)] bg-gradient-to-r from-[#5b5fff] via-[#8b5cf6] to-[#ff6bb5] hover:from-[#5155f5] hover:via-[#7c54ef] hover:to-[#f45ca8]"
-                  onClick={handleReceiptScan} data-testid="scan-receipt-btn">
-                  <Scan className="w-4 h-4" /> Scan Receipt
-                </Button>
+                <div ref={voiceCommandRef} className="relative flex flex-wrap items-end justify-end gap-3">
+                  {(showVoiceExamples || voiceDraft) && (
+                    <div className="absolute bottom-full right-0 z-[80] mb-3 w-[min(28rem,calc(100vw-4rem))]">
+                      {showVoiceExamples && !voiceDraft && (
+                        <div className="overflow-hidden rounded-[24px] border-[1.5px] border-[rgba(168,85,247,0.4)] bg-[rgba(139,92,246,0.15)] p-4 shadow-[0_0_30px_rgba(126,34,206,0.25)] backdrop-blur-[20px] backdrop-saturate-[180%]">
+                          <div className="relative">
+                            <p className="bg-gradient-to-r from-[#4C1D95] to-[#7C3AED] bg-clip-text text-sm font-semibold text-transparent [-webkit-text-fill-color:transparent]">Talk it. Track it. FinFusion logs it.</p>
+                            <p className="mt-1 text-xs text-[#1E1B4B]">FinFusion AI listens. Just say things like:</p>
+                            <div className="mt-4 flex flex-wrap gap-2">
+                              {voiceExamples.map(example => (
+                                <span
+                                  key={example}
+                                  className="rounded-full border border-[#A855F7] bg-[#F3E8FF] px-3 py-1.5 text-xs font-medium text-[#1E1B4B] shadow-[0_8px_18px_rgba(168,85,247,0.10)] transition duration-200 hover:-translate-y-0.5 hover:border-[#7E22CE] hover:shadow-[0_0_12px_rgba(168,85,247,0.6)]"
+                                >
+                                  {example}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {voiceDraft && (
+                        <div className="rounded-[24px] border-[1.5px] border-[rgba(168,85,247,0.4)] bg-[rgba(139,92,246,0.15)] p-5 shadow-[0_0_30px_rgba(126,34,206,0.25)] backdrop-blur-[20px] backdrop-saturate-[180%]">
+                          <div className="flex justify-center">
+                            <p className="bg-gradient-to-r from-[#4C1D95] to-[#7C3AED] bg-clip-text text-sm font-semibold text-transparent text-center [-webkit-text-fill-color:transparent]">Transcription successful. Review the details below.</p>
+                          </div>
+                          <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3 items-end">
+                            <div className="space-y-1.5">
+                              <Label htmlFor="voice-amount" className="text-[#1E1B4B]">Amount</Label>
+                              <Input
+                                id="voice-amount"
+                                type="number"
+                                step="0.01"
+                                value={voiceDraft.amount}
+                                onChange={e => setVoiceDraft(prev => ({ ...prev, amount: e.target.value }))}
+                                className="border-[#D8B4FE] bg-white/80 text-[#1E1B4B] focus-visible:ring-0 focus-visible:border-[#A855F7] focus-visible:shadow-[0_0_10px_rgba(168,85,247,0.5)] [&:not(:placeholder-shown)]:border-[#A855F7] [&:not(:placeholder-shown)]:shadow-[0_0_10px_rgba(168,85,247,0.5)]"
+                              />
+                            </div>
+                            <div className="space-y-1.5">
+                              <Label htmlFor="voice-category" className="text-[#1E1B4B]">Category</Label>
+                              <Select
+                                value={voiceDraft.category}
+                                onValueChange={value => setVoiceDraft(prev => ({ ...prev, category: value }))}
+                              >
+                                <SelectTrigger id="voice-category" className="border-[#D8B4FE] bg-white/80 text-[#1E1B4B] focus:ring-0 focus:border-[#A855F7] focus:shadow-[0_0_10px_rgba(168,85,247,0.5)] data-[state=open]:border-[#A855F7] data-[state=open]:shadow-[0_0_10px_rgba(168,85,247,0.5)]">
+                                  <SelectValue placeholder="Select category" />
+                                </SelectTrigger>
+                                <SelectContent side="top" sideOffset={8} position="popper" className="z-[120] max-h-72 border-violet-200 bg-white">
+                                  {categoryOptions.map(cat => (
+                                    <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          </div>
+                          <div className="mt-5 flex justify-end gap-2">
+                            <Button type="button" variant="outline" onClick={resetVoiceDraft}>Cancel</Button>
+                            <Button
+                              type="button"
+                              onClick={handleVoiceExpenseSave}
+                              disabled={loading}
+                              className="border-0 text-white bg-gradient-to-r from-[#5b5fff] via-[#8b5cf6] to-[#ff6bb5] hover:from-[#5155f5] hover:via-[#7c54ef] hover:to-[#f45ca8]"
+                            >
+                              {loading ? 'Saving...' : 'Confirm & Save'}
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  <Button className="rounded-full h-12 sm:h-13 px-5 sm:px-6 text-sm sm:text-base font-semibold flex items-center gap-2 border-0 text-white shadow-[0_16px_35px_rgba(99,102,241,0.28)] bg-gradient-to-r from-[#5b5fff] via-[#8b5cf6] to-[#ff6bb5] hover:from-[#5155f5] hover:via-[#7c54ef] hover:to-[#f45ca8]"
+                    onClick={handleReceiptScan} data-testid="scan-receipt-btn">
+                    <Scan className="w-4 h-4" /> Scan Receipt
+                  </Button>
+                  <div className="group relative">
+                    <div className="pointer-events-none absolute inset-0 rounded-full bg-gradient-to-r from-[#5b5fff] via-[#8b5cf6] to-[#ff6bb5] opacity-0 blur-md transition duration-200 group-hover:opacity-40 group-hover:animate-pulse" />
+                    <Button
+                      type="button"
+                      size="icon"
+                      onClick={toggleSpeechRecognition}
+                      disabled={!speechSupported}
+                      className={`relative rounded-full h-12 w-12 cursor-pointer border-0 text-white shadow-[0_16px_35px_rgba(99,102,241,0.28)] bg-gradient-to-r from-[#5b5fff] via-[#8b5cf6] to-[#ff6bb5] hover:from-[#5155f5] hover:via-[#7c54ef] hover:to-[#f45ca8] transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-60 ${isListening ? 'animate-pulse shadow-[0_0_0_6px_rgba(139,92,246,0.14),0_22px_50px_rgba(99,102,241,0.34)] scale-105' : 'hover:scale-105 hover:shadow-[0_0_0_6px_rgba(139,92,246,0.12),0_20px_45px_rgba(99,102,241,0.3)]'}`}
+                      aria-label={isListening ? 'Stop voice command' : 'Start voice command'}
+                      data-testid="voice-command-btn"
+                    >
+                      {isListening ? (
+                        <span className="flex items-center gap-1" aria-hidden="true">
+                          <span className="h-1.5 w-1.5 rounded-full bg-white animate-[voiceDot_0.9s_ease-in-out_infinite]" />
+                          <span className="h-1.5 w-1.5 rounded-full bg-white animate-[voiceDot_0.9s_ease-in-out_0.15s_infinite]" />
+                          <span className="h-1.5 w-1.5 rounded-full bg-white animate-[voiceDot_0.9s_ease-in-out_0.3s_infinite]" />
+                        </span>
+                      ) : (
+                        <Mic className="w-4 h-4 transition-transform duration-200 group-hover:scale-110 group-hover:rotate-6" />
+                      )}
+                    </Button>
+                  </div>
+                </div>
               </div>
             </Card>
 
@@ -463,7 +735,7 @@ export default function Dashboard() {
               <Select value={newExpense.category} onValueChange={val => setNewExpense({ ...newExpense, category: val })}>
                 <SelectTrigger data-testid="expense-category-select"><SelectValue placeholder="Select category" /></SelectTrigger>
                 <SelectContent>
-                  {categories.map(cat => (
+                  {categoryOptions.map(cat => (
                     <SelectItem key={cat} value={cat} data-testid={`category-option-${cat}`}>{cat}</SelectItem>
                   ))}
                 </SelectContent>
@@ -494,6 +766,19 @@ export default function Dashboard() {
         onClose={() => setShowReceiptScan(false)}
         onExpenseCreated={loadData}
       />
+
+      <style>{`
+        @keyframes voiceDot {
+          0%, 80%, 100% {
+            transform: translateY(0) scale(0.9);
+            opacity: 0.55;
+          }
+          40% {
+            transform: translateY(-3px) scale(1.15);
+            opacity: 1;
+          }
+        }
+      `}</style>
     </div>
   );
 }
